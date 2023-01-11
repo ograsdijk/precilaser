@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Union
+from typing import Union, Tuple, Optional
 
 from .enums import PrecilaserCommand, PrecilaserMessageType, PrecilaserReturn
 
@@ -10,6 +10,9 @@ class PrecilaserCommandParamLength:
     SET_CURRENT: int = 2
     POWER_STABILIZATION: int = 1
     STATUS: int = 0
+    SEED_QUERY: int = 0
+    SEED_SET_TEMP: int = 3
+    SEED_SET_VOLTAGE: int = 3
 
 
 @dataclass
@@ -18,6 +21,9 @@ class PrecilaserReturnParamLength:
     SET_CURRENT: int = 2
     POWER_STABILIZATION: int = 1
     STATUS: int = 64
+    SEED_QUERY: int = 40
+    SEED_SET_TEMP: int = 4
+    SEED_SET_VOLTAGE: int = 2
 
 
 @dataclass(frozen=True)
@@ -67,20 +73,21 @@ class PrecilaserMessage:
 
 def decompose_message(
     message: bytearray,
-    header: bytes = b"\x50\x00\x00",
-    terminator: bytes = b"\x0d\x0a",
+    header: bytes,
+    terminator: bytes,
     endian: str = "big",
+    check_start: int = 5,
 ):
-    if message[:3] != header:
-        raise ValueError(f"invalid message header {message[:3]}")
-    if message[-2:] != terminator:
-        raise ValueError(f"invalid message terminator {message[-2:]}")
+    if message[: len(header)] != header:
+        raise ValueError(f"invalid message header {message[:len(header)]}")
+    if message[-len(terminator) :] != terminator:
+        raise ValueError(f"invalid message terminator {message[-len(terminator):]}")
 
     ret = PrecilaserReturn(message[3])
     param_length = int.from_bytes(message[4], endian)
-    param_bytes = message[5 : 5 + param_length]
-    checksum = message[5 + param_length]
-    xor_check = message[5 + param_length + 1]
+    param_bytes = message[check_start : check_start + param_length]
+    checksum = message[check_start + param_length]
+    xor_check = message[check_start + param_length + 1]
     param = int.from_bytes(param_bytes, endian)
     pm = PrecilaserMessage(ret, param, type=PrecilaserMessageType.RETURN)
     if pm.checksum != checksum:
