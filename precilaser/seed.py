@@ -17,17 +17,6 @@ class Seed(AbstractPrecilaserDevice):
             resource_name, address, header, terminator, device_type, endian
         )
 
-    @property
-    def status(self) -> SeedStatus:
-        message = self._generate_message(PrecilaserCommand.SEED_STATUS)
-        self._write(message)
-        message = self._read()
-        if message.param is not None:
-            return SeedStatus(message.param, self.endian)
-        else:
-            raise ValueError("no status data bytes retrieved")
-
-
     def _set_value(
         self,
         value: int,
@@ -45,6 +34,15 @@ class Seed(AbstractPrecilaserDevice):
         self._write(message)
         return
 
+    @property
+    def status(self) -> SeedStatus:
+        message = self._generate_message(PrecilaserCommand.SEED_STATUS)
+        self._write(message)
+        message = self._read()
+        if message.param is not None:
+            return SeedStatus(message.param, self.endian)
+        else:
+            raise ValueError("no status data bytes retrieved")
 
     @property
     def temperature_setpoint(self) -> float:
@@ -55,9 +53,7 @@ class Seed(AbstractPrecilaserDevice):
         setpoint = int(temperature * 1_000)
         self._set_value(setpoint, PrecilaserCommand.SEED_SET_TEMP)
         message = self._read()
-        self._check_write_return(
-            message.command_bytes[5:7], setpoint, "temperature setpoint"
-        )
+        self._check_write_return(message.payload[:2], setpoint, "temperature setpoint")
 
     @property
     def piezo_voltage(self) -> float:
@@ -71,4 +67,4 @@ class Seed(AbstractPrecilaserDevice):
         setpoint = int(voltage * 100)
         self._set_value(setpoint, PrecilaserCommand.SEED_SET_VOLTAGE)
         message = self._read()
-        self._check_write_return(message.command_bytes[5:7], setpoint, "piezo voltage")
+        self._check_write_return(message.payload[:2], setpoint, "piezo voltage")

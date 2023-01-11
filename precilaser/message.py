@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
-from typing import Union, Optional
+from typing import Optional, Union
 
+from .check import checksum, xor_check
 from .enums import PrecilaserCommand, PrecilaserMessageType, PrecilaserReturn
 
 
@@ -35,6 +36,7 @@ class PrecilaserMessage:
     terminator: bytes
     endian: str = "big"
     type: PrecilaserMessageType = PrecilaserMessageType.COMMAND
+    payload: Optional[bytearray] = field(init=False)
     command_bytes: bytearray = field(init=False)
     checksum: bytes = field(init=False)
     xor_check: bytes = field(init=False)
@@ -45,34 +47,32 @@ class PrecilaserMessage:
         command_bytes += bytearray(b"\x00")
         command_bytes += self.address.to_bytes(1, self.endian)
         command_bytes += bytearray(self.command.value)
+
         if self.type == PrecilaserMessageType.COMMAND:
             param_byte_length = getattr(PrecilaserCommandParamLength, self.command.name)
         else:
             param_byte_length = getattr(PrecilaserReturnParamLength, self.command.name)
+
         command_bytes += param_byte_length.to_bytes(1, self.endian)
         if self.param is not None:
             command_bytes += self.param.to_bytes(param_byte_length, self.endian)
-        checksum = self._checksum(command_bytes[1:])
-        command_bytes += checksum.to_bytes(1, self.endian)
-        xor_check = self._xor_check(command_bytes[1:-1])
-        command_bytes += xor_check.to_bytes(1, self.endian)
+
+        sum = checksum(command_bytes[1:])
+        xor = xor_check(command_bytes[1:])
+
+        command_bytes += sum.to_bytes(1, self.endian)
+        command_bytes += xor.to_bytes(1, self.endian)
         command_bytes += self.terminator
+        object.__setattr__(
+            self,
+            "payload",
+            command_bytes[5 : 5 + param_byte_length]
+            if self.param is not None
+            else None,
+        )
         object.__setattr__(self, "command_bytes", command_bytes)
-        object.__setattr__(self, "checksum", checksum)
-        object.__setattr__(self, "xor_check", xor_check)
-
-    def _checksum(self, data: bytearray) -> int:
-        checksum_byte = 0
-        for b in data:
-            checksum_byte += b
-        checksum_byte %= 2**8
-        return checksum_byte
-
-    def _xor_check(self, data: bytearray) -> int:
-        xor_byte = 0
-        for b in data:
-            xor_byte = xor_byte ^ b
-        return xor_byte
+        object.__setattr__(self, "checksum", sum)
+        object.__setattr__(self, "xor_check", xor)
 
 
 def decompose_message(
@@ -103,7 +103,7 @@ def decompose_message(
         type=PrecilaserMessageType.RETURN,
     )
     if pm.checksum != checksum:
-        raise ValueError(f"invalid message checksum {checksum}")
+        raise ValueError(f"invalid message checksum {checksum} != {pm.checksum}")
     if pm.xor_check != xor_check:
-        raise ValueError(f"invalid xor check {xor_check}")
+        raise ValueError(f"invalid xor check {xor_check} != {pm.xor_check}")
     return pm
