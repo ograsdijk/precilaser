@@ -4,7 +4,7 @@ from typing import Tuple
 
 @dataclass(frozen=True)
 class SystemStatus:
-    status: int
+    status: int = field(repr=False)
     pd_protection: Tuple[bool, ...] = field(init=False)
     temperature_protection: Tuple[bool, ...] = field(init=False)
     fault: bool = field(init=False)
@@ -28,7 +28,7 @@ class SystemStatus:
 
 @dataclass(frozen=True)
 class DriverUnlock:
-    driver_unlock: int
+    driver_unlock: int = field(repr=False)
     driver_enable_control: Tuple[bool, ...] = field(init=False)
     driver_enable_flag: Tuple[bool, ...] = field(init=False)
     interlock: bool = field(init=False)
@@ -48,7 +48,7 @@ class DriverUnlock:
 
 @dataclass(frozen=True)
 class PDStatus:
-    status: int
+    status: int = field(repr=False)
     sampling_enable: bool = field(init=False)
     hardware_protection: bool = field(init=False)
     upper_limit_enabled: bool = field(init=False)
@@ -76,8 +76,8 @@ class PDStatus:
 
 @dataclass(frozen=True)
 class PrecilaserStatus:
-    status: int
-    endian: str = "big"
+    status: int = field(repr=False)
+    endian: str = field(default="big", repr=False)
     stable: bool = field(init=False)
     system_status: SystemStatus = field(init=False)
     driver_unlock: DriverUnlock = field(init=False)
@@ -139,8 +139,8 @@ class PrecilaserStatus:
 
 @dataclass(frozen=True)
 class SeedStatus:
-    status: int
-    endian: str
+    status: int = field(repr=False)
+    endian: str = field(repr=False)
     temperature_set: float = field(init=False)
     temperature_act: float = field(init=False)
     temperature_diode: float = field(init=False)
@@ -160,53 +160,49 @@ class SeedStatus:
             int.from_bytes(status_bytes[byte_index : byte_index + 2], self.endian)
             / 1_000,
         )
-        byte_index += 2
 
-        byte_index += 2
+        byte_index = 4
         object.__setattr__(
-            self, "current_set", status_bytes[byte_index : byte_index + 2], self.endian
+            self,
+            "current_set",
+            int.from_bytes(status_bytes[byte_index : byte_index + 2], self.endian),
         )
-        byte_index += 2
 
-        byte_index += 9
+        byte_index = 15
         object.__setattr__(
             self,
             "temperature_diode",
             int.from_bytes(status_bytes[byte_index : byte_index + 2], self.endian)
             / 1_000,
         )
-        byte_index += 2
 
-        byte_index += 2
+        byte_index = 18
         object.__setattr__(
             self,
             "temperature_act",
             int.from_bytes(status_bytes[byte_index : byte_index + 2], self.endian)
             / 1_000,
         )
-        byte_index += 2
 
-        byte_index += 2
+        byte_index = 23
         object.__setattr__(
             self,
             "current_act",
             int.from_bytes(status_bytes[byte_index : byte_index + 2], self.endian),
         )
-        byte_index += 2
 
-        byte_index += 5
+        byte_index = 30
         object.__setattr__(
             self,
             "wavelength",
             int.from_bytes(status_bytes[byte_index : byte_index + 4], self.endian)
             / 10_000,
         )
-        byte_index += 4
 
+        byte_index = 34
         object.__setattr__(
             self,
             "piezo_voltage",
             int.from_bytes(status_bytes[byte_index : byte_index + 2], self.endian)
             / 100,
         )
-        byte_index += 2

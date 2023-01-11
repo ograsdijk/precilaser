@@ -20,7 +20,6 @@ class AbstractPrecilaserDevice(ABC):
         address: int,
         header: bytes,
         terminator: bytes,
-        check_start: int,
         device_type: PrecilaserDeviceType,
         endian: str,
     ):
@@ -32,7 +31,6 @@ class AbstractPrecilaserDevice(ABC):
         self.address = address
         self.header = header
         self.terminator = terminator
-        self.check_start = check_start
         self.device_type = device_type
         self.endian = endian
 
@@ -49,11 +47,11 @@ class AbstractPrecilaserDevice(ABC):
 
     def _read(self) -> PrecilaserMessage:
         message = decompose_message(
-            self.instrument.read(),
+            self.instrument.read_raw(),
             self.address,
             self.header,
             self.terminator,
-            self.check_start,
+            self.endian,
         )
         self._handle_message(message)
         return message

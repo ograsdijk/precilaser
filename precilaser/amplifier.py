@@ -11,12 +11,11 @@ class Amplifier(AbstractPrecilaserDevice):
         address: int,
         header: bytes = b"\x50",
         terminator: bytes = b"\x0d\x0a",
-        check_start: int = 1,
         device_type: PrecilaserDeviceType = PrecilaserDeviceType.AMP,
         endian: str = "big",
     ):
         super().__init__(
-            resource_name, address, header, terminator, check_start, device_type, endian
+            resource_name, address, header, terminator, device_type, endian
         )
 
     def _handle_message(self, message: PrecilaserMessage) -> PrecilaserMessage:
@@ -66,10 +65,9 @@ class SHGAmplifier(Amplifier):
         address: int,
         header: bytes = b"\x50",
         terminator: bytes = b"\x0d\x0a",
-        check_start: int = 1,
         device_type: PrecilaserDeviceType = PrecilaserDeviceType.AMP,
         endian: str = "big",
     ):
         super().__init__(
-            resource_name, address, header, terminator, check_start, device_type, endian
+            resource_name, address, header, terminator, device_type, endian
         )
