@@ -22,7 +22,29 @@ class Seed(AbstractPrecilaserDevice):
         message = self._generate_message(PrecilaserCommand.SEED_STATUS)
         self._write(message)
         message = self._read()
-        return SeedStatus(message.param, self.endian)
+        if message.param is not None:
+            return SeedStatus(message.param, self.endian)
+        else:
+            raise ValueError("no status data bytes retrieved")
+
+
+    def _set_value(
+        self,
+        value: int,
+        command: PrecilaserCommand,
+        nbytes: int = 2,
+        save: bool = False,
+    ):
+        param_bytes = value.to_bytes(nbytes, self.endian)
+        if save:
+            param_bytes += b"1"
+        else:
+            param_bytes += b"0"
+        param = int.from_bytes(param_bytes, self.endian)
+        message = self._generate_message(command, param)
+        self._write(message)
+        return
+
 
     @property
     def temperature_setpoint(self) -> float:
@@ -30,17 +52,12 @@ class Seed(AbstractPrecilaserDevice):
 
     @temperature_setpoint.setter
     def temperature_setpoint(self, temperature: float):
-        param = int(temperature * 1_000)
-        # do not save to eeprom, i.e. add a zero to the end
-        param_bytes = param.to_bytes(2, self.endian)
-        param_bytes += b"0"
-        param = int.from_bytes(param_bytes, self.endian)
-        message = self._generate_message(PrecilaserCommand.SEED_SET_TEMP, param)
-        self._write(message)
+        setpoint = int(temperature * 1_000)
+        self._set_value(setpoint, PrecilaserCommand.SEED_SET_TEMP)
         message = self._read()
-        assert int.from_bytes(message.command_bytes[5:7], self.endian) == int(
-            temperature * 1_000
-        ), "temperature setpoint not set to requested value"
+        self._check_write_return(
+            message.command_bytes[5:7], setpoint, "temperature setpoint"
+        )
 
     @property
     def piezo_voltage(self) -> float:
@@ -51,14 +68,7 @@ class Seed(AbstractPrecilaserDevice):
         assert (
             voltage >= 0 and voltage <= 74
         ), "Piezo voltage cannot exceed 0V-74V range"
-        param = int(voltage * 100)
-        # do not save to eeprom, i.e. add a zero to the end
-        param_bytes = param.to_bytes(2, self.endian)
-        param_bytes += b"0"
-        param = int.from_bytes(param_bytes, "big")
-        message = self._generate_message(PrecilaserCommand.SEED_SET_VOLTAGE, param)
-        self._write(message)
+        setpoint = int(voltage * 100)
+        self._set_value(setpoint, PrecilaserCommand.SEED_SET_VOLTAGE)
         message = self._read()
-        assert int.from_bytes(message.command_bytes[5:7], self.endian) == int(
-            voltage * 100
-        ), "piezo voltage not set to requested value"
+        self._check_write_return(message.command_bytes[5:7], setpoint, "piezo voltage")

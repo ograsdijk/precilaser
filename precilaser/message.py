@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Union, Tuple, Optional
+from typing import Union, Optional
 
 from .enums import PrecilaserCommand, PrecilaserMessageType, PrecilaserReturn
 

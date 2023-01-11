@@ -1,7 +1,7 @@
 from .device import AbstractPrecilaserDevice
-from .enums import PrecilaserCommand, PrecilaserReturn, PrecilaserDeviceType
-from .status import PrecilaserStatus
+from .enums import PrecilaserCommand, PrecilaserDeviceType, PrecilaserReturn
 from .message import PrecilaserMessage
+from .status import PrecilaserStatus
 
 
 class Amplifier(AbstractPrecilaserDevice):
@@ -22,7 +22,10 @@ class Amplifier(AbstractPrecilaserDevice):
         # the amplifier sends out a status message at a set time interval,
         # need to check for this message
         if message.command == PrecilaserReturn.AMP_STATUS.value:
-            self.status = PrecilaserStatus(message.param)
+            if message.param is not None:
+                self.status = PrecilaserStatus(message.param)
+            else:
+                raise ValueError("no status data bytes retrieved")
             return message
         else:
             return message
@@ -46,7 +49,7 @@ class Amplifier(AbstractPrecilaserDevice):
         current_int = int(round(current * 100, 0))
         message = self._generate_message(PrecilaserCommand.AMP_SET_CURRENT, current_int)
         self._write(message)
-        return_message = self._read_until_reply(PrecilaserReturn.AMP_SET_CURRENT)
+        self._read_until_reply(PrecilaserReturn.AMP_SET_CURRENT)
 
     def enable(self):
         message = self._generate_message(PrecilaserCommand.AMP_ENABLE, 0b111)

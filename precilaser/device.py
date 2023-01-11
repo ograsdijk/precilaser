@@ -4,13 +4,12 @@ from typing import Optional
 import pyvisa
 
 from .enums import (
-    PrecilaserReturn,
-    PrecilaserDeviceType,
     PrecilaserCommand,
+    PrecilaserDeviceType,
     PrecilaserMessageType,
+    PrecilaserReturn,
 )
 from .message import PrecilaserMessage, decompose_message
-from .status import PrecilaserStatus
 
 
 class AbstractPrecilaserDevice(ABC):
@@ -61,6 +60,19 @@ class AbstractPrecilaserDevice(ABC):
             message = self._read()
             if message.command == return_command.value:
                 return message
+
+    def _check_write_return(
+        self, data: bytes, value: int, value_name: Optional[str] = None
+    ):
+        if int.from_bytes(data, self.endian) != value:
+            error_str = (
+                f"not set to requested value: {value} !="
+                f" {int.from_bytes(data, self.endian)}"
+            )
+            if value_name is not None:
+                error_str = f"{value_name} {error_str}"
+            raise ValueError(error_str)
+        return
 
     def _generate_message(
         self, command: PrecilaserCommand, param: Optional[int] = None

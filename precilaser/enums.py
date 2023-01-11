@@ -14,7 +14,8 @@ class PrecilaserCommand(Enum):
 class PrecilaserReturn(Enum):
     AMP_ENABLE = b"\x40"
     AMP_SET_CURRENT = b"\x41"
-    AMP_POWER_STABILIZATION = b"\x44"
+    AMP_POWER_STABILIZATION = b"\x45"
+    AMP_STATUS = b"\x44"
     SEED_STATUS = b"\xB7"
     SEED_SET_TEMP = b"\xB3"
     SEED_SET_VOLTAGE = b"\xBE"

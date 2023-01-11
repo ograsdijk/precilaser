@@ -59,11 +59,11 @@ class PDStatus:
     fault: bool = field(init=False)
 
     def __post_init__(self):
-        for idf, field in enumerate(self.__dataclass_fields__):
-            if field in ["status", "fault"]:
+        for idf, f in enumerate(self.__dataclass_fields__):
+            if f in ["status", "fault"]:
                 continue
             idf -= 1
-            object.__setattr__(self, field, bool(self.status >> idf & 1))
+            object.__setattr__(self, f, bool(self.status >> idf & 1))
 
         object.__setattr__(
             self,
