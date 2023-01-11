@@ -135,3 +135,78 @@ class PrecilaserStatus:
             for bi in range(byte_index, byte_index + 4 * 2, 2)
         )
         object.__setattr__(self, "temperatures", temperatures)
+
+
+@dataclass(frozen=True)
+class SeedStatus:
+    status: int
+    endian: str
+    temperature_set: float = field(init=False)
+    temperature_act: float = field(init=False)
+    temperature_diode: float = field(init=False)
+    current_set: int = field(init=False)
+    current_act: int = field(init=False)
+    wavelength: float = field(init=False)
+    piezo_voltage: float = field(init=False)
+
+    def __post_init__(self):
+        byte_index = 0
+        status_bytes = self.status.to_bytes(40, self.endian)
+
+        byte_index = 2
+        object.__setattr__(
+            self,
+            "temperature_set",
+            int.from_bytes(status_bytes[byte_index : byte_index + 2], self.endian)
+            / 1_000,
+        )
+        byte_index += 2
+
+        byte_index += 2
+        object.__setattr__(
+            self, "current_set", status_bytes[byte_index : byte_index + 2], self.endian
+        )
+        byte_index += 2
+
+        byte_index += 9
+        object.__setattr__(
+            self,
+            "temperature_diode",
+            int.from_bytes(status_bytes[byte_index : byte_index + 2], self.endian)
+            / 1_000,
+        )
+        byte_index += 2
+
+        byte_index += 2
+        object.__setattr__(
+            self,
+            "temperature_act",
+            int.from_bytes(status_bytes[byte_index : byte_index + 2], self.endian)
+            / 1_000,
+        )
+        byte_index += 2
+
+        byte_index += 2
+        object.__setattr__(
+            self,
+            "current_act",
+            int.from_bytes(status_bytes[byte_index : byte_index + 2], self.endian),
+        )
+        byte_index += 2
+
+        byte_index += 5
+        object.__setattr__(
+            self,
+            "wavelength",
+            int.from_bytes(status_bytes[byte_index : byte_index + 4], self.endian)
+            / 10_000,
+        )
+        byte_index += 4
+
+        object.__setattr__(
+            self,
+            "piezo_voltage",
+            int.from_bytes(status_bytes[byte_index : byte_index + 2], self.endian)
+            / 100,
+        )
+        byte_index += 2
