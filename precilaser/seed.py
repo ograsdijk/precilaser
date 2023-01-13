@@ -74,12 +74,12 @@ class Seed(AbstractPrecilaserDevice):
         self._check_write_return(message.payload[:2], setpoint, "piezo voltage")
 
     def enable(self):
-        self._set_value(True, PrecilaserCommand.SEED_ENABLE)
+        self._set_value(True, PrecilaserCommand.SEED_ENABLE, nbytes=1)
         message = self._read()
         self._check_write_return(message.payload, True, "enable laser")
 
     def disable(self):
-        self._set_value(False, PrecilaserCommand.SEED_ENABLE)
+        self._set_value(False, PrecilaserCommand.SEED_ENABLE, nbytes=1)
         message = self._read()
         self._check_write_return(message.payload, False, "disable laser")
 
@@ -89,9 +89,7 @@ class Seed(AbstractPrecilaserDevice):
         message = self._read()
         self.serial = message.payload[16:24]
         parameter_bytes = message.payload[25 : 25 + 64]
-        self.wavelength_params = [
-            int.from_bytes(parameter_bytes[i], self.endian) for i in range(6)
-        ]
+        self.wavelength_params = [parameter_bytes[i] for i in range(6)]
 
     @property
     def wavelength(self) -> float:
@@ -101,7 +99,9 @@ class Seed(AbstractPrecilaserDevice):
             self.wavelength_params is not None
         ), "Wavelength parameters not loaded from device"
         parameter = self.wavelength_params
-        wavelength = ((parameter[0] << 8) | parameter[1]) * temp_grating_act / 10000 + (
+        wavelength = (
+            (parameter[0] << 8) | parameter[1]
+        ) * temp_grating_act / 10_000 + (
             parameter[2] << 24
             | parameter[3] << 16
             | ((parameter[4] << 8) | parameter[5])
