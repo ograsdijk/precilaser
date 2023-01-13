@@ -9,6 +9,8 @@ class PrecilaserCommand(Enum):
     SEED_STATUS = b"\xA9"
     SEED_SET_TEMP = b"\xA5"
     SEED_SET_VOLTAGE = b"\xAE"
+    SEED_ENABLE = b"\xA8"
+    SEED_SERIAL_WAV = b"\xAA"
 
 
 class PrecilaserReturn(Enum):
@@ -19,6 +21,8 @@ class PrecilaserReturn(Enum):
     SEED_STATUS = b"\xB7"
     SEED_SET_TEMP = b"\xB3"
     SEED_SET_VOLTAGE = b"\xBE"
+    SEED_ENABLE = b"\xB8"
+    SEED_SERIAL_WAV = b"\xB0"
 
 
 class PrecilaserMessageType(Enum):

@@ -1,3 +1,5 @@
+from typing import Optional, Tuple
+
 from .device import AbstractPrecilaserDevice
 from .enums import PrecilaserCommand, PrecilaserDeviceType
 from .status import SeedStatus
@@ -16,6 +18,8 @@ class Seed(AbstractPrecilaserDevice):
         super().__init__(
             resource_name, address, header, terminator, device_type, endian
         )
+        self.serial: Optional[bytes] = None
+        self.wavelength_params: Optional[Tuple[int, ...]] = None
 
     def _set_value(
         self,
@@ -68,3 +72,38 @@ class Seed(AbstractPrecilaserDevice):
         self._set_value(setpoint, PrecilaserCommand.SEED_SET_VOLTAGE)
         message = self._read()
         self._check_write_return(message.payload[:2], setpoint, "piezo voltage")
+
+    def enable(self):
+        self._set_value(True, PrecilaserCommand.SEED_ENABLE)
+        message = self._read()
+        self._check_write_return(message.payload, True, "enable laser")
+
+    def disable(self):
+        self._set_value(False, PrecilaserCommand.SEED_ENABLE)
+        message = self._read()
+        self._check_write_return(message.payload, False, "disable laser")
+
+    def _get_serial_wavelength_params(self):
+        message = self._generate_message(PrecilaserCommand.SEED_SERIAL_WAV)
+        self._write(message)
+        message = self._read()
+        self.serial = message.payload[16:24]
+        parameter_bytes = message.payload[25 : 25 + 64]
+        self.wavelength_params = [
+            int.from_bytes(parameter_bytes[i], self.endian) for i in range(6)
+        ]
+
+    @property
+    def wavelength(self) -> float:
+        status = self.status
+        temp_grating_act = status.temperature_act
+        assert (
+            self.wavelength_params is not None
+        ), "Wavelength parameters not loaded from device"
+        parameter = self.wavelength_params
+        wavelength = ((parameter[0] << 8) | parameter[1]) * temp_grating_act / 10000 + (
+            parameter[2] << 24
+            | parameter[3] << 16
+            | ((parameter[4] << 8) | parameter[5])
+        )
+        return wavelength / 1_000

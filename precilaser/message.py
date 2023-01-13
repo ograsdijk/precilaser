@@ -14,6 +14,8 @@ class PrecilaserCommandParamLength:
     SEED_STATUS: int = 0
     SEED_SET_TEMP: int = 3
     SEED_SET_VOLTAGE: int = 3
+    SEED_ENABLE: int = 2
+    SEED_SERIAL_WAV: int = 0
 
 
 @dataclass
@@ -25,6 +27,8 @@ class PrecilaserReturnParamLength:
     SEED_STATUS: int = 40
     SEED_SET_TEMP: int = 4
     SEED_SET_VOLTAGE: int = 2
+    SEED_ENABLE: int = 1
+    SEED_SERIAL_WAV: int = 124
 
 
 @dataclass(frozen=True)
