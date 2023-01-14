@@ -150,6 +150,9 @@ class SeedStatus:
     wavelength: float = field(init=False)
     piezo_voltage: float = field(init=False)
     emission: bool = field(init=False)
+    power: int = field(init=False)
+    run_hours: int = field(init=False)
+    run_minutes: int = field(init=False)
 
     def __post_init__(self):
         byte_index = 0
@@ -195,6 +198,16 @@ class SeedStatus:
             "current_act",
             int.from_bytes(status_bytes[byte_index : byte_index + 2], self.endian),
         )
+
+        byte_index = 27
+        object.__setattr__(
+            self,
+            "run_hours",
+            int.from_bytes(status_bytes[byte_index : byte_index + 2], self.endian),
+        )
+
+        byte_index = 29
+        object.__setattr__(self, "run_minutes", status_bytes[byte_index])
 
         byte_index = 30
         object.__setattr__(

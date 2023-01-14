@@ -44,6 +44,25 @@ def test_PrecilaserStatus():
 
 
 def test_SeedStatus():
+    message_bytes = (
+        b"P\x00d\xb7(a\xa8a\xa8\x01\xf4\x00\x00\x00\x00\x00\x00\x00\x00\x00a\xc9\x00a"
+        b"\xff\x00\x00\x00\x00\x16\x00\x00\x03R\x0b\x00\xa5\xd2y\x00\x00\x00\x01\x00"
+        b"\x00;{\r\n"
+    )
+    payload_bytes = message_bytes[5 : 5 + PrecilaserReturnParamLength.SEED_STATUS]
+    status = SeedStatus(payload_bytes, endian="big")
+    assert status.temperature_act == 25.087
+    assert status.temperature_diode == 25.033
+    assert status.temperature_set == 25.0
+    assert status.current_set == 500
+    assert status.current_act == 22
+    assert status.piezo_voltage == 0
+    assert status.wavelength == 1086.7321
+    assert status.power == 1
+    assert status.emission is False
+    assert status.run_hours == 850
+    assert status.run_minutes == 11
+
     # testing with a random number
     message = PrecilaserMessage(
         PrecilaserReturn.SEED_STATUS,
@@ -64,3 +83,5 @@ def test_SeedStatus():
     assert status.current_act == 40868
     assert status.piezo_voltage == 227.58
     assert status.wavelength == 108406.0632
+    assert status.power == 8225
+    assert status.emission is True

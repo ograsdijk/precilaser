@@ -38,15 +38,15 @@ class AbstractPrecilaserDevice(ABC):
 
     def _write(self, message: PrecilaserMessage):
         while True:
-            if self.instrument.bytes_in_buffer != 0:
+            if self.instrument.bytes_in_buffer != 0:  # type: ignore
                 self._handle_message(self._read())
             else:
                 break
-        self.instrument.write_raw(bytes(message.command_bytes))
+        self.instrument.write_raw(bytes(message.command_bytes))  # type: ignore
 
     def _read(self) -> PrecilaserMessage:
         message = decompose_message(
-            self.instrument.read_raw(),
+            self.instrument.read_raw(),  # type: ignore
             self.address,
             self.header,
             self.terminator,
