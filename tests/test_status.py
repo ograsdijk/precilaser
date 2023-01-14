@@ -1,5 +1,5 @@
 from precilaser.enums import PrecilaserMessageType, PrecilaserReturn
-from precilaser.message import PrecilaserMessage
+from precilaser.message import PrecilaserMessage, PrecilaserReturnParamLength
 from precilaser.status import PrecilaserStatus, SeedStatus
 
 
@@ -7,14 +7,16 @@ def test_PrecilaserStatus():
     # testing with a random number
     message = PrecilaserMessage(
         PrecilaserReturn.AMP_STATUS,
-        5151256923390522315301251121412425192132412421581125251212512558390258,
         address=100,
+        payload=(
+            5151256923390522315301251121412425192132412421581125251212512558390258
+        ).to_bytes(PrecilaserReturnParamLength.AMP_STATUS, "big"),
         header=b"P",
         terminator=b"\r\n",
         endian="big",
         type=PrecilaserMessageType.RETURN,
     )
-    status = PrecilaserStatus(message.param)
+    status = PrecilaserStatus(message.payload)
     assert status.stable is False
     assert status.system_status.pd_protection == (False, False, False, False)
     assert status.system_status.temperature_protection == (
@@ -45,14 +47,16 @@ def test_SeedStatus():
     # testing with a random number
     message = PrecilaserMessage(
         PrecilaserReturn.SEED_STATUS,
-        5151256923390522315301251121412425192132412421581125251212512558390258,
         address=100,
+        payload=(
+            5151256923390522315301251121412425192132412421581125251212512558390258
+        ).to_bytes(PrecilaserReturnParamLength.SEED_STATUS, "big"),
         header=b"P",
         terminator=b"\r\n",
         endian="big",
         type=PrecilaserMessageType.RETURN,
     )
-    status = SeedStatus(message.param, endian="big")
+    status = SeedStatus(message.payload, endian="big")
     assert status.temperature_act == 32.074
     assert status.temperature_diode == 29.145
     assert status.temperature_set == 0

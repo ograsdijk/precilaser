@@ -9,13 +9,15 @@ from precilaser.message import (
 def test_PrecilaserMessage():
     for command in [PrecilaserCommand.AMP_SET_CURRENT]:
         value = int(1.5 * 100)
-
         param_length = getattr(PrecilaserCommandParamLength, command.name)
+        payload = value.to_bytes(param_length, "big")
 
-        message = PrecilaserMessage(command, value, 0, b"\x50", b"\x0d\x0a")
+        message = PrecilaserMessage(
+            command, address=0, payload=payload, header=b"\x50", terminator=b"\x0d\x0a"
+        )
         assert message.header == b"\x50"
         assert message.terminator == b"\x0d\x0a"
-        assert message.param == value
+        assert message.payload == payload
         assert message.command == command
         assert message.type == PrecilaserMessageType.COMMAND
         assert message.checksum == 57
@@ -46,10 +48,7 @@ def test_decompose_message():
 
     assert message.address == 100
     assert message.payload == (25_000).to_bytes(2, "big") + (25_025).to_bytes(2, "big")
-    assert message.param == 1638425025
-    assert message.param.to_bytes(4, "big") == (25_000).to_bytes(2, "big") + (
-        25_025
-    ).to_bytes(2, "big")
+    assert int.from_bytes(message.payload, "big") == 1638425025
     assert message.type == PrecilaserMessageType.RETURN
     assert message.xor_check == 186
     assert message.checksum == 70

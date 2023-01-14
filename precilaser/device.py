@@ -75,15 +75,15 @@ class AbstractPrecilaserDevice(ABC):
         return
 
     def _generate_message(
-        self, command: PrecilaserCommand, param: Optional[int] = None
+        self, command: PrecilaserCommand, payload: Optional[bytes] = None
     ) -> PrecilaserMessage:
         message = PrecilaserMessage(
-            command,
-            param,
-            self.address,
-            self.header,
-            self.terminator,
-            self.endian,
-            PrecilaserMessageType.COMMAND,
+            command=command,
+            address=self.address,
+            payload=payload,
+            header=self.header,
+            terminator=self.terminator,
+            endian=self.endian,
+            type=PrecilaserMessageType.COMMAND,
         )
         return message

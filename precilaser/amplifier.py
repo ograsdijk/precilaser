@@ -22,8 +22,8 @@ class Amplifier(AbstractPrecilaserDevice):
         # the amplifier sends out a status message at a set time interval,
         # need to check for this message
         if message.command == PrecilaserReturn.AMP_STATUS.value:
-            if message.param is not None:
-                self.status = PrecilaserStatus(message.param)
+            if message.payload is not None:
+                self.status = PrecilaserStatus(message.payload)
             else:
                 raise ValueError("no status data bytes retrieved")
             return message
@@ -47,16 +47,22 @@ class Amplifier(AbstractPrecilaserDevice):
 
     def set_current(self, current: float):
         current_int = int(round(current * 100, 0))
-        message = self._generate_message(PrecilaserCommand.AMP_SET_CURRENT, current_int)
+        message = self._generate_message(
+            PrecilaserCommand.AMP_SET_CURRENT, current_int.to_bytes(2, self.endian)
+        )
         self._write(message)
         self._read_until_reply(PrecilaserReturn.AMP_SET_CURRENT)
 
     def enable(self):
-        message = self._generate_message(PrecilaserCommand.AMP_ENABLE, 0b111)
+        message = self._generate_message(
+            PrecilaserCommand.AMP_ENABLE, 0b111.to_bytes(3, self.endian)
+        )
         self._write(message)
 
     def disable(self):
-        message = self._generate_message(PrecilaserCommand.AMP_ENABLE, 0b0)
+        message = self._generate_message(
+            PrecilaserCommand.AMP_ENABLE, 0b0.to_bytes(3, self.endian)
+        )
         self._write(message)
         return
 

@@ -76,7 +76,7 @@ class PDStatus:
 
 @dataclass(frozen=True)
 class PrecilaserStatus:
-    status: int = field(repr=False)
+    status_bytes: bytes = field(repr=False)
     endian: str = field(default="big", repr=False)
     stable: bool = field(init=False)
     system_status: SystemStatus = field(init=False)
@@ -85,10 +85,11 @@ class PrecilaserStatus:
     pd_value: Tuple[int, ...] = field(init=False)
     pd_status: Tuple[PDStatus, ...] = field(init=False)
     temperatures: Tuple[float, ...] = field(init=False)
+    power: int = field(init=False)
 
     def __post_init__(self):
         byte_index = 0
-        status_bytes = self.status.to_bytes(64, self.endian)
+        status_bytes = self.status_bytes
 
         # get the stable bit
         object.__setattr__(self, "stable", bool(status_bytes[byte_index]))
@@ -139,7 +140,7 @@ class PrecilaserStatus:
 
 @dataclass(frozen=True)
 class SeedStatus:
-    status: int = field(repr=False)
+    status_bytes: bytes = field(repr=False)
     endian: str = field(repr=False)
     temperature_set: float = field(init=False)
     temperature_act: float = field(init=False)
@@ -148,10 +149,11 @@ class SeedStatus:
     current_act: int = field(init=False)
     wavelength: float = field(init=False)
     piezo_voltage: float = field(init=False)
+    emission: bool = field(init=False)
 
     def __post_init__(self):
         byte_index = 0
-        status_bytes = self.status.to_bytes(40, self.endian)
+        status_bytes = self.status_bytes
 
         byte_index = 2
         object.__setattr__(
@@ -167,6 +169,9 @@ class SeedStatus:
             "current_set",
             int.from_bytes(status_bytes[byte_index : byte_index + 2], self.endian),
         )
+
+        byte_index = 13
+        object.__setattr__(self, "emission", bool(status_bytes[byte_index]))
 
         byte_index = 15
         object.__setattr__(
@@ -205,4 +210,11 @@ class SeedStatus:
             "piezo_voltage",
             int.from_bytes(status_bytes[byte_index : byte_index + 2], self.endian)
             / 100,
+        )
+
+        byte_index = 36
+        object.__setattr__(
+            self,
+            "power",
+            int.from_bytes(status_bytes[byte_index : byte_index + 2], self.endian),
         )
