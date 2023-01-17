@@ -40,7 +40,6 @@ class PrecilaserMessage:
     terminator: bytes = field(default=b"\r\n", repr=False)
     endian: str = field(default="big", repr=False)
     type: PrecilaserMessageType = PrecilaserMessageType.COMMAND
-    payload: Optional[bytearray] = field(init=False)
     command_bytes: bytearray = field(init=False)
     checksum: bytes = field(init=False)
     xor_check: bytes = field(init=False)
