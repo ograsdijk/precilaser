@@ -34,16 +34,16 @@ class PrecilaserReturnParamLength:
 @dataclass(frozen=True)
 class PrecilaserMessage:
     command: Union[PrecilaserCommand, PrecilaserReturn]
-    param: Optional[int]
-    address: int
-    header: bytes
-    terminator: bytes
-    endian: str = "big"
+    param: Optional[int] = field(repr=False)
+    address: int = field(repr=False)
+    header: bytes = field(repr=False)
+    terminator: bytes = field(repr=False)
+    endian: str = field(default="big", repr=False)
     type: PrecilaserMessageType = PrecilaserMessageType.COMMAND
     payload: Optional[bytearray] = field(init=False)
-    command_bytes: bytearray = field(init=False)
-    checksum: bytes = field(init=False)
-    xor_check: bytes = field(init=False)
+    command_bytes: bytearray = field(init=False, repr=False)
+    checksum: bytes = field(init=False, repr=False)
+    xor_check: bytes = field(init=False, repr=False)
 
     def __post_init__(self):
         command_bytes = bytearray()
