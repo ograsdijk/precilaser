@@ -28,13 +28,12 @@ class Seed(AbstractPrecilaserDevice):
         nbytes: int = 2,
         save: bool = False,
     ):
-        param_bytes = value.to_bytes(nbytes, self.endian)
+        payload = value.to_bytes(nbytes, self.endian)
         if save:
-            param_bytes += b"1"
+            payload += b"1"
         else:
-            param_bytes += b"0"
-        param = int.from_bytes(param_bytes, self.endian)
-        message = self._generate_message(command, param)
+            payload += b"0"
+        message = self._generate_message(command, payload)
         self._write(message)
         return
 
@@ -43,8 +42,8 @@ class Seed(AbstractPrecilaserDevice):
         message = self._generate_message(PrecilaserCommand.SEED_STATUS)
         self._write(message)
         message = self._read()
-        if message.param is not None:
-            return SeedStatus(message.param, self.endian)
+        if message.payload is not None:
+            return SeedStatus(message.payload, self.endian)
         else:
             raise ValueError("no status data bytes retrieved")
 
@@ -57,7 +56,12 @@ class Seed(AbstractPrecilaserDevice):
         setpoint = int(temperature * 1_000)
         self._set_value(setpoint, PrecilaserCommand.SEED_SET_TEMP)
         message = self._read()
-        self._check_write_return(message.payload[:2], setpoint, "temperature setpoint")
+        if message.payload is not None:
+            self._check_write_return(
+                message.payload[:2], setpoint, "temperature setpoint"
+            )
+        else:
+            raise ValueError(f"not set to requested value: {setpoint}")
 
     @property
     def piezo_voltage(self) -> float:
@@ -71,17 +75,48 @@ class Seed(AbstractPrecilaserDevice):
         setpoint = int(voltage * 100)
         self._set_value(setpoint, PrecilaserCommand.SEED_SET_VOLTAGE)
         message = self._read()
-        self._check_write_return(message.payload[:2], setpoint, "piezo voltage")
+        if message.payload is not None:
+            self._check_write_return(message.payload[:2], setpoint, "piezo voltage")
+        else:
+            raise ValueError(f"not set to requested value: {setpoint}")
 
     def enable(self):
-        self._set_value(True, PrecilaserCommand.SEED_ENABLE, nbytes=1)
+        # supplied programming manual is incorrect, e.g. also the command and return
+        # enums
+        # self._set_value(True, PrecilaserCommand.SEED_ENABLE, nbytes=1)
+        # byte 13 is set to 1
+        enable_bytes = (
+            b"P\x00d\xa7\x19a\xa8a\xa8\x01\xf4\x00\x00\x00\x00\x00\x00\x00\x01\x01d"
+            b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x91K\r\n"
+        )
+        self.instrument.write_raw(enable_bytes)
+        # enabling/disabling the laser returns a status message, where in the first
+        # received message after sending the command bit 13 is set to indicate
+        # a change in emission state
         message = self._read()
-        self._check_write_return(message.payload, True, "enable laser")
+        if message.payload is None or message.payload[13] != 1:
+            raise ValueError("emission not enabled")
+        # message = self._read()
+        # self._check_write_return(message.payload, True, "enable laser")
 
     def disable(self):
-        self._set_value(False, PrecilaserCommand.SEED_ENABLE, nbytes=1)
+        # supplied programming manual is incorrect, e.g. also the command and return
+        # enums
+        # self._set_value(False, PrecilaserCommand.SEED_ENABLE, nbytes=1)
+        # byte 13 is set to 0
+        disable_bytes = (
+            b"P\x00d\xa7\x19a\xa8a\xa8\x01\xf4\x00\x00\x00\x00\x00\x00\x00\x00\x01d\x00"
+            b"\x00\x00\x00\x00\x00\x00\x00\x00\x90J\r\n"
+        )
+        self.instrument.write_raw(disable_bytes)
+        # enabling/disabling the laser returns a status message, where in the first
+        # received message after sending the command bit 13 is set to indicate
+        # a change in emission state
         message = self._read()
-        self._check_write_return(message.payload, False, "disable laser")
+        if message.payload is None or message.payload[13] != 1:
+            raise ValueError("emission not disabled")
+        # message = self._read()
+        # self._check_write_return(message.payload, False, "disable laser")
 
     def _get_serial_wavelength_params(self):
         message = self._generate_message(PrecilaserCommand.SEED_SERIAL_WAV)
@@ -94,7 +129,7 @@ class Seed(AbstractPrecilaserDevice):
     @property
     def wavelength(self) -> float:
         status = self.status
-        temp_grating_act = status.temperature_act
+        temp_grating_act = status.temperature_act * 1_000
         assert (
             self.wavelength_params is not None
         ), "Wavelength parameters not loaded from device"
@@ -106,4 +141,5 @@ class Seed(AbstractPrecilaserDevice):
             | parameter[3] << 16
             | ((parameter[4] << 8) | parameter[5])
         )
-        return wavelength / 1_000
+        # manual states / 1_000 but this yields an incorrect wavelength
+        return wavelength / 10_000
