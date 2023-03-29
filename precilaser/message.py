@@ -9,7 +9,7 @@ from .enums import PrecilaserCommand, PrecilaserMessageType, PrecilaserReturn
 class PrecilaserCommandParamLength:
     AMP_ENABLE: int = 1
     AMP_SET_CURRENT: int = 2
-    AMP_POWER_STABILIZATION: int = 1
+    AMP_TEC_TEMPERATURE: int = 1
     AMP_STATUS: int = 0
     SEED_STATUS: int = 0
     SEED_SET_TEMP: int = 3
@@ -21,8 +21,8 @@ class PrecilaserCommandParamLength:
 @dataclass
 class PrecilaserReturnParamLength:
     AMP_ENABLE: int = 13
-    AMP_SET_CURRENT: int = 2
-    AMP_POWER_STABILIZATION: int = 1
+    AMP_SET_CURRENT: int = 46
+    AMP_TEC_TEMPERATURE: int = 17
     AMP_STATUS: int = 64
     SEED_STATUS: int = 40
     SEED_SET_TEMP: int = 4
@@ -97,8 +97,12 @@ def decompose_message(
         endian=endian,
         type=PrecilaserMessageType.RETURN,
     )
-    if pm.checksum != checksum:
-        raise ValueError(f"invalid message checksum {checksum} != {pm.checksum}")
-    if pm.xor_check != xor_check:
-        raise ValueError(f"invalid xor check {xor_check} != {pm.xor_check}")
+    try:
+        if pm.checksum != checksum:
+            raise ValueError(f"invalid message checksum {checksum} != {pm.checksum}")
+        if pm.xor_check != xor_check:
+            raise ValueError(f"invalid xor check {xor_check} != {pm.xor_check}")
+    except Exception as err:
+        print(pm)
+        raise err
     return pm

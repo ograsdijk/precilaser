@@ -85,7 +85,6 @@ class PrecilaserStatus:
     pd_value: Tuple[int, ...] = field(init=False)
     pd_status: Tuple[PDStatus, ...] = field(init=False)
     temperatures: Tuple[float, ...] = field(init=False)
-    power: int = field(init=False)
 
     def __post_init__(self):
         byte_index = 0
@@ -95,7 +94,7 @@ class PrecilaserStatus:
         object.__setattr__(self, "stable", bool(status_bytes[byte_index]))
 
         # get the system status
-        byte_index = 3
+        byte_index = 2
         system_status_int = int.from_bytes(
             status_bytes[byte_index : byte_index + 2], self.endian
         )
@@ -109,7 +108,7 @@ class PrecilaserStatus:
         byte_index = 7
         driver_current = tuple(
             int.from_bytes(status_bytes[bi : bi + 2], self.endian) / 100
-            for bi in range(byte_index, byte_index + 3 * 2, 2)
+            for bi in range(byte_index, byte_index + 3 *7, 7)
         )
         object.__setattr__(self, "driver_current", driver_current)
 
@@ -117,14 +116,14 @@ class PrecilaserStatus:
         byte_index = 28
         pd_value = tuple(
             int.from_bytes(status_bytes[bi : bi + 2], self.endian)
-            for bi in range(byte_index, byte_index + 5 * 2, 2)
+            for bi in range(byte_index, byte_index + 4 * 2, 2)
         )
         object.__setattr__(self, "pd_value", pd_value)
 
         # get the pd status
         byte_index = 36
         pd_status = tuple(
-            PDStatus(int.from_bytes(status_bytes[bi : bi + 1], self.endian))
+            PDStatus(status_bytes[bi])
             for bi in range(byte_index, byte_index + 4)
         )
         object.__setattr__(self, "pd_status", pd_status)

@@ -4,7 +4,7 @@ from enum import Enum, auto
 class PrecilaserCommand(Enum):
     AMP_ENABLE = b"\x30"
     AMP_SET_CURRENT = b"\xa1"
-    AMP_POWER_STABILIZATION = b"\x47"
+    AMP_TEC_TEMPERATURE = b"\x47"
     AMP_STATUS = b"\x04"
     SEED_STATUS = b"\xA9"
     SEED_SET_TEMP = b"\xA5"
@@ -16,7 +16,7 @@ class PrecilaserCommand(Enum):
 class PrecilaserReturn(Enum):
     AMP_ENABLE = b"\x40"
     AMP_SET_CURRENT = b"\x41"
-    AMP_POWER_STABILIZATION = b"\x45"
+    AMP_TEC_TEMPERATURE = b"\x45"
     AMP_STATUS = b"\x44"
     SEED_STATUS = b"\xB7"
     SEED_SET_TEMP = b"\xB3"
