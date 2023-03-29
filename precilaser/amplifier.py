@@ -1,9 +1,7 @@
 from .device import AbstractPrecilaserDevice
 from .enums import PrecilaserCommand, PrecilaserDeviceType, PrecilaserReturn
-from .message import PrecilaserMessage, decompose_message
+from .message import PrecilaserMessage
 from .status import PrecilaserStatus
-from typing import Tuple
-from pyvisa import VisaIOError
 
 
 class Amplifier(AbstractPrecilaserDevice):
@@ -21,46 +19,20 @@ class Amplifier(AbstractPrecilaserDevice):
         )
         self._status = None
 
-    def _read(self) -> PrecilaserMessage:
-        while True:
-            try:
-                msg = self.instrument.read_bytes(1)
-                if msg == self.header:
-                    msg += self.instrument.read_bytes(2)
-                    if msg == self.header + b'\x00' + self.address.to_bytes(1, self.endian):
-                        msg += self.instrument.read_bytes(2)
-                        msg += self.instrument.read_bytes(msg[-1] + 4)
-                        message = decompose_message(msg, self.address, self.header, self.terminator, self.endian)
-                        return message
-            except VisaIOError as err:
-                if "VI_ERROR_ASRL_OVERRUN" in err.args[0]:
-                    continue
-                else:
-                    raise err
-
-    def _handle_message(self, message: PrecilaserMessage) -> PrecilaserMessage:
-        # the amplifier sends out a status message at a set time interval,
-        # need to check for this message
-        if message.command == PrecilaserReturn.AMP_STATUS:
-            if message.payload is not None:
-                self._status = PrecilaserStatus(message.payload)
-            else:
-                raise ValueError("no status data bytes retrieved")
-            return message
-        else:
-            return message
+        self._message_handling[PrecilaserReturn.AMP_STATUS] = (
+            "_status",
+            PrecilaserStatus,
+        )
 
     def _read_until_reply(self, return_command: PrecilaserReturn) -> PrecilaserMessage:
         while True:
             message = self._read()
-            self._handle_message(message)
             if message.command == return_command:
                 return message
 
     def _read_until_buffer_empty(self) -> None:
         while self.instrument.bytes_in_buffer > 0:
-            message = self._read()
-            self._handle_message(message)
+            self._read()
 
     @property
     def fault(self) -> bool:
@@ -76,7 +48,7 @@ class Amplifier(AbstractPrecilaserDevice):
         # message = self._generate_message(PrecilaserCommand.AMP_STATUS)
         # self._write(message)
         self._read_until_buffer_empty()
-        message = self._read_until_reply(PrecilaserReturn.AMP_STATUS)
+        self._read_until_reply(PrecilaserReturn.AMP_STATUS)
         return self._status
 
     @property
@@ -84,7 +56,7 @@ class Amplifier(AbstractPrecilaserDevice):
         return self.status.driver_current
 
     @current.setter
-    def current(self, current: float):
+    def current(self, current: float) -> None:
         current_int = int(round(current * 100, 0))
         message = self._generate_message(
             PrecilaserCommand.AMP_SET_CURRENT, current_int.to_bytes(2, self.endian)
@@ -92,19 +64,37 @@ class Amplifier(AbstractPrecilaserDevice):
         self._write(message)
         self._read_until_reply(PrecilaserReturn.AMP_SET_CURRENT)
 
-    def enable(self):
+    def enable(self) -> None:
         message = self._generate_message(
             PrecilaserCommand.AMP_ENABLE, 0b111.to_bytes(1, self.endian)
         )
         self._write(message)
-        self._read_until_reply(PrecilaserReturn.AMP_ENABLE)
+        message = self._read_until_reply(PrecilaserReturn.AMP_ENABLE)
+        if message.payload != b"Enable set ok":
+            raise ValueError(f"Amplifier not enabled; {message.payload}")
 
-    def disable(self):
+    def disable(self) -> None:
         message = self._generate_message(
             PrecilaserCommand.AMP_ENABLE, 0b0.to_bytes(1, self.endian)
         )
         self._write(message)
-        self._read_until_reply(PrecilaserReturn.AMP_ENABLE)
+        message = self._read_until_reply(PrecilaserReturn.AMP_ENABLE)
+        if message.payload != b"Enable set ok":
+            raise ValueError(f"Amplifier not disabled; {message.payload}")
+
+    def save(self) -> None:
+        message = self._generate_message(PrecilaserCommand.AMP_SAVE, None)
+        self._write(message)
+        message = self._read_until_reply(PrecilaserReturn.AMP_SAVE)
+        if message.payload != b"ROM saved":
+            raise ValueError(f"Values not saved to ROM; {message.payload}")
+
+
+def temperature_handler(message: PrecilaserMessage) -> tuple[float, float]:
+    return (
+        int.from_bytes(message.payload[1:3], message.endian) / 100,
+        int.from_bytes(message.payload[3:5], message.endian) / 100,
+    )
 
 
 class SHGAmplifier(Amplifier):
@@ -120,31 +110,35 @@ class SHGAmplifier(Amplifier):
         super().__init__(
             resource_name, address, header, terminator, device_type, endian
         )
-        self._shg_temperature = (0.0, 0.0)
-
-    def _handle_message(self, message: PrecilaserMessage) -> PrecilaserMessage:
-        # the amplifier sends out a status message at a set time interval,
-        # need to check for this message
-        if message.command == PrecilaserReturn.AMP_STATUS:
-            if message.payload is not None:
-                self._status = PrecilaserStatus(message.payload)
-            else:
-                raise ValueError("no status data bytes retrieved")
-            return message
-        elif message.command == PrecilaserReturn.AMP_TEC_TEMPERATURE:
-            if message.payload is not None:
-                self._shg_temperature = (
-                    int.from_bytes(message.payload[1:3], 'big')/100,
-                    int.from_bytes(message.payload[3:5], 'big')/100
-                )
-            else:
-                raise ValueError("no status data bytes retrieved")
-            return message
-        else:
-            return message
+        self._temperatures = (0.0, 0.0)
+        self._message_handling[PrecilaserReturn.AMP_TEC_TEMPERATURE] = (
+            "_temperatures",
+            temperature_handler,
+        )
 
     @property
-    def shg_temperature(self) -> Tuple[float, float]:
+    def shg_temperature(self) -> float:
         self._read_until_buffer_empty()
-        return self._shg_temperature
-        
+        return self._temperatures[1]
+
+    @shg_temperature.setter
+    def shg_temperature(self, temperature: float) -> None:
+        payload = b"\x00\x02"
+        payload += int(temperature * 100).to_bytes(2, self.endian)
+        message = self._generate_message(PrecilaserCommand.AMP_TEC_TEMPERATURE, payload)
+        self._write(message)
+        self._read_until_reply(PrecilaserReturn.AMP_TEC_TEMPERATURE)
+
+    def enable_power_stabilization(self) -> None:
+        message = self._generate_message(PrecilaserCommand.AMP_POWER_STAB, b"\x01")
+        self._write(message)
+        message = self._read_until_reply(PrecilaserReturn.AMP_ENABLE)
+        if message.payload != b"Stable set ok":
+            raise ValueError(f"Power stabilization not enabled: {message.payload}")
+
+    def disable_power_stabilization(self) -> None:
+        message = self._generate_message(PrecilaserCommand.AMP_POWER_STAB, b"\x00")
+        self._write(message)
+        message = self._read_until_reply(PrecilaserReturn.AMP_ENABLE)
+        if message.payload != b"Stable set ok":
+            raise ValueError(f"Power stabilization not disabled: {message.payload}")

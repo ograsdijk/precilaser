@@ -2,6 +2,7 @@ from abc import ABC
 from typing import Optional
 
 import pyvisa
+from pyvisa import VisaIOError
 
 from .enums import (
     PrecilaserCommand,
@@ -32,9 +33,18 @@ class AbstractPrecilaserDevice(ABC):
         self.terminator = terminator
         self.device_type = device_type
         self.endian = endian
+        self._message_handling: dict[PrecilaserReturn, tuple[str, callable]] = {}
 
     def _handle_message(self, message: PrecilaserMessage) -> PrecilaserMessage:
-        return message
+        if len(self._message_handling) == 0:
+            return message
+        else:
+            for ret_cmd, (attr, transform) in self._message_handling.items():
+                if message.command == ret_cmd:
+                    if message.payload is not None:
+                        setattr(self, attr, transform(message.payload))
+                    else:
+                        raise ValueError(f"{ret_cmd.name} no data bytes retrieved")
 
     def _write(self, message: PrecilaserMessage):
         while True:
@@ -44,14 +54,29 @@ class AbstractPrecilaserDevice(ABC):
                 break
         self.instrument.write_raw(bytes(message.command_bytes))  # type: ignore
 
+    def _read_single_message(self) -> PrecilaserMessage:
+        while True:
+            try:
+                msg = self.instrument.read_bytes(1)
+                if msg == self.header:
+                    msg += self.instrument.read_bytes(2)
+                    if msg == self.header + b"\x00" + self.address.to_bytes(
+                        1, self.endian
+                    ):
+                        msg += self.instrument.read_bytes(2)
+                        msg += self.instrument.read_bytes(msg[-1] + 4)
+                        message = decompose_message(
+                            msg, self.address, self.header, self.terminator, self.endian
+                        )
+                        return message
+            except VisaIOError as err:
+                if "VI_ERROR_ASRL_OVERRUN" in err.args[0]:
+                    continue
+                else:
+                    raise err
+
     def _read(self) -> PrecilaserMessage:
-        message = decompose_message(
-            self.instrument.read_raw(),  # type: ignore
-            self.address,
-            self.header,
-            self.terminator,
-            self.endian,
-        )
+        message = self._read_single_message()
         self._handle_message(message)
         return message
 

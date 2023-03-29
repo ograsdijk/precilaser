@@ -9,8 +9,10 @@ from .enums import PrecilaserCommand, PrecilaserMessageType, PrecilaserReturn
 class PrecilaserCommandParamLength:
     AMP_ENABLE: int = 1
     AMP_SET_CURRENT: int = 2
-    AMP_TEC_TEMPERATURE: int = 1
+    AMP_POWER_STAB: int = 1
+    AMP_TEC_TEMPERATURE: int = 4
     AMP_STATUS: int = 0
+    AMP_SAVE: int = 0
     SEED_STATUS: int = 0
     SEED_SET_TEMP: int = 3
     SEED_SET_VOLTAGE: int = 3
@@ -22,8 +24,10 @@ class PrecilaserCommandParamLength:
 class PrecilaserReturnParamLength:
     AMP_ENABLE: int = 13
     AMP_SET_CURRENT: int = 46
+    AMP_POWER_STAB: int = 13
     AMP_TEC_TEMPERATURE: int = 17
     AMP_STATUS: int = 64
+    AMP_SAVE: int = 9
     SEED_STATUS: int = 40
     SEED_SET_TEMP: int = 4
     SEED_SET_VOLTAGE: int = 2

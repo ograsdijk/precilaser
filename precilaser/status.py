@@ -108,7 +108,7 @@ class PrecilaserStatus:
         byte_index = 7
         driver_current = tuple(
             int.from_bytes(status_bytes[bi : bi + 2], self.endian) / 100
-            for bi in range(byte_index, byte_index + 3 *7, 7)
+            for bi in range(byte_index, byte_index + 3 * 7, 7)
         )
         object.__setattr__(self, "driver_current", driver_current)
 
@@ -123,8 +123,7 @@ class PrecilaserStatus:
         # get the pd status
         byte_index = 36
         pd_status = tuple(
-            PDStatus(status_bytes[bi])
-            for bi in range(byte_index, byte_index + 4)
+            PDStatus(status_bytes[bi]) for bi in range(byte_index, byte_index + 4)
         )
         object.__setattr__(self, "pd_status", pd_status)
 
