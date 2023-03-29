@@ -55,12 +55,6 @@ class AbstractPrecilaserDevice(ABC):
         self._handle_message(message)
         return message
 
-    def _read_until_reply(self, return_command: PrecilaserReturn) -> PrecilaserMessage:
-        while True:
-            message = self._read()
-            if message.command == return_command.value:
-                return message
-
     def _check_write_return(
         self, data: bytes, value: int, value_name: Optional[str] = None
     ):

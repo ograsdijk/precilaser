@@ -17,6 +17,7 @@ class Amplifier(AbstractPrecilaserDevice):
         super().__init__(
             resource_name, address, header, terminator, device_type, endian
         )
+        self._status = self.status
 
     def _handle_message(self, message: PrecilaserMessage) -> PrecilaserMessage:
         # the amplifier sends out a status message at a set time interval,
@@ -30,6 +31,12 @@ class Amplifier(AbstractPrecilaserDevice):
         else:
             return message
 
+    def _read_until_reply(self, return_command: PrecilaserReturn) -> PrecilaserMessage:
+        while True:
+            message = self._read()
+            if message.command == return_command.value:
+                return message
+
     @property
     def fault(self) -> bool:
         if self.status is not None:
@@ -39,13 +46,19 @@ class Amplifier(AbstractPrecilaserDevice):
         else:
             return False
 
-    def get_status(self) -> PrecilaserStatus:
+    @property
+    def status(self) -> PrecilaserStatus:
         message = self._generate_message(PrecilaserCommand.AMP_STATUS)
         self._write(message)
-        message = self._read()
+        message = self._read_until_reply(PrecilaserReturn.AMP_STATUS)
         return self.status
 
-    def set_current(self, current: float):
+    @property
+    def current(self) -> float:
+        return self.status.driver_current
+
+    @current.setter
+    def current(self, current: float):
         current_int = int(round(current * 100, 0))
         message = self._generate_message(
             PrecilaserCommand.AMP_SET_CURRENT, current_int.to_bytes(2, self.endian)
@@ -58,13 +71,14 @@ class Amplifier(AbstractPrecilaserDevice):
             PrecilaserCommand.AMP_ENABLE, 0b111.to_bytes(3, self.endian)
         )
         self._write(message)
+        self._read_until_reply(PrecilaserReturn.AMP_ENABLE)
 
     def disable(self):
         message = self._generate_message(
             PrecilaserCommand.AMP_ENABLE, 0b0.to_bytes(3, self.endian)
         )
         self._write(message)
-        return
+        self._read_until_reply(PrecilaserReturn.AMP_ENABLE)
 
 
 class SHGAmplifier(Amplifier):
