@@ -23,6 +23,9 @@ pm.write("SENS:CORR:BEAM 1.3")
 time.sleep(1)
 amp._read_until_buffer_empty()
 
+amp.enable()
+amp.current = 5
+
 
 def eval_function(parametrization: dict[str, float]):
     try:
@@ -55,5 +58,8 @@ best_parameters, best_values, experiment, model = optimize(
     evaluation_function=eval_function,
     minimize=False,
 )
+
+amp.current = 0
+amp.disable()
 
 print(best_parameters, best_values)
