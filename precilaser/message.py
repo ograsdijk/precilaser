@@ -103,9 +103,15 @@ def decompose_message(
     )
     try:
         if pm.checksum != checksum:
-            raise ValueError(f"invalid message checksum {checksum} != {pm.checksum}")
+            raise ValueError(
+                f"invalid message checksum {checksum} !="
+                f" {int.from_bytes(pm.checksum, endian)}"
+            )
         if pm.xor_check != xor_check:
-            raise ValueError(f"invalid xor check {xor_check} != {pm.xor_check}")
+            raise ValueError(
+                f"invalid xor check {xor_check} !="
+                f" {int.from_bytes(pm.xor_check, endian)}"
+            )
     except Exception as err:
         print(pm)
         raise err

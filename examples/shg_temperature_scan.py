@@ -1,10 +1,10 @@
 import csv
 import time
 
-import pyvisa
 import asciichartpy as acp
 import matplotlib.pyplot as plt
 import numpy as np
+import pyvisa
 from rich.console import Console, Group
 from rich.live import Live
 from rich.panel import Panel
@@ -20,24 +20,14 @@ from rich.progress import (
 )
 
 from precilaser import SHGAmplifier
+from precilaser.utils import wait_until_shg_temperature_stable
 
 amp_com_port = "COM50"
-power_meter = "USB0::0x1313::0x8078::P0020445::INSTR" # Thorlabs PM100D
+power_meter = "USB0::0x1313::0x8078::P0020445::INSTR"  # Thorlabs PM100D
 scan_range = 4  # scan range in celcius to scan around the current setpoint
 dt = 10
 points = 101
 
-def wait_until_temp_stable(amplifier: SHGAmplifier, temperature_setpoint: float, dT: float = 0.02):
-    count_within_bounds = 0
-    while True:
-        temperature = amplifier.shg_temperature
-        if abs(temperature - temperature_setpoint) < dT:
-            count_within_bounds += 1
-            if count_within_bounds == 5:
-                break
-        else:
-            count_within_bounds = 0
-        time.sleep(0.2)
 
 def get_panel(data, title, height=15, format="{:>2.2f}"):
     return Panel(acp.plot(data, {"height": height, "format": format}), title=title)
@@ -69,10 +59,11 @@ group = Group(panel, progress)
 
 console = Console()
 
-amp = SHGAmplifier("COM50", address = 0)
+amp = SHGAmplifier("COM50", address=0)
 
+# Thorlabs PM100D power meter, probably works with any of the Thorlabs power meters.
 rm = pyvisa.ResourceManager()
-pm = rm.open_resource(power_meter, read_termination = '\n')
+pm = rm.open_resource(power_meter, read_termination="\n")
 
 pm.write("SENS:CORR:WAV 543.5")
 pm.write("SENS:CORR:BEAM 1.3")
@@ -83,14 +74,18 @@ amp.status
 current_temperature_setpoint = amp.shg_temperature
 
 # enable amplifier
-console.print("Enabling the amplifier", end = '\r')
+console.print("Enabling the amplifier", end="\r")
 amp.enable()
 
 
 # give the amplifier some time to finish starting up and going to the first temperature
-with console.status("Setting the first temperature point and waiting for temperature to stabilize"):
+with console.status(
+    "Setting the first temperature point and waiting for temperature to stabilize"
+):
     amp.shg_temperature = current_temperature_setpoint - scan_range / 2
-    wait_until_temp_stable(amp, current_temperature_setpoint - scan_range / 2)
+    wait_until_shg_temperature_stable(
+        amp, current_temperature_setpoint - scan_range / 2
+    )
 
 amp.current = 5
 
@@ -103,8 +98,8 @@ with Live(group, refresh_per_second=10) as live:
         points,
     ):
         amp.shg_temperature = T
-        wait_until_temp_stable(amp, T)
-        power = float(pm.query("MEAS:POW?"))*1000
+        wait_until_shg_temperature_stable(amp, T)
+        power = float(pm.query("MEAS:POW?")) * 1000
         data.append((T, amp.shg_temperature, power))
         progress.update(task, advance=1, value=f"{T:>2.2f}")
         s, x, y = zip(*data)

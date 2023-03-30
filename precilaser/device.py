@@ -1,5 +1,5 @@
 from abc import ABC
-from typing import Optional
+from typing import Callable, Optional, cast
 
 import pyvisa
 from pyvisa import VisaIOError
@@ -23,9 +23,23 @@ class AbstractPrecilaserDevice(ABC):
         device_type: PrecilaserDeviceType,
         endian: str,
     ):
+        """
+        Generic Precilaser device interface
+
+        Args:
+            resource_name (str): resource name, e.g. com port
+            address (int): device address
+            header (bytes): message header
+            terminator (bytes): message terminator
+            device_type (PrecilaserDeviceType): device type
+            endian (str): endian of message payload
+        """
         self.rm = pyvisa.ResourceManager()
-        self.instrument = self.rm.open_resource(
-            resource_name=resource_name, baud_rate=115200, write_termination=""
+        self.instrument = cast(
+            pyvisa.resources.SerialInstrument,
+            self.rm.open_resource(
+                resource_name=resource_name, baud_rate=115200, write_termination=""
+            ),
         )
 
         self.address = address
@@ -33,9 +47,26 @@ class AbstractPrecilaserDevice(ABC):
         self.terminator = terminator
         self.device_type = device_type
         self.endian = endian
-        self._message_handling: dict[PrecilaserReturn, tuple[str, callable]] = {}
+
+        # dict with return types that require message handling; the tuple for each
+        # return type includes the attr to write to and the transformation function
+        self._message_handling: dict[PrecilaserReturn, tuple[str, Callable]] = {}
 
     def _handle_message(self, message: PrecilaserMessage) -> PrecilaserMessage:
+        """
+        message handling function. Some precilaser devices periodically send status
+        updates to the host, which require some message handling to save those results.
+        Examples are the SHG crystal temperature and amplifier status
+
+        Args:
+            message (PrecilaserMessage): message
+
+        Raises:
+            ValueError: raises if the message payload is empty
+
+        Returns:
+            PrecilaserMessage: message
+        """
         if len(self._message_handling) == 0:
             return message
         else:
@@ -45,8 +76,15 @@ class AbstractPrecilaserDevice(ABC):
                         setattr(self, attr, transform(message))
                     else:
                         raise ValueError(f"{ret_cmd.name} no data bytes retrieved")
+            return message
 
     def _write(self, message: PrecilaserMessage):
+        """
+        Write a message to the Precilaser device
+
+        Args:
+            message (PrecilaserMessage): message
+        """
         while True:
             if self.instrument.bytes_in_buffer != 0:  # type: ignore
                 self._handle_message(self._read())
@@ -55,6 +93,15 @@ class AbstractPrecilaserDevice(ABC):
         self.instrument.write_raw(bytes(message.command_bytes))  # type: ignore
 
     def _read_single_message(self) -> PrecilaserMessage:
+        """
+        Read a single message from the Precilaser device
+
+        Raises:
+            err: raise any error that isn't a VI_ERROR_ASRL_OVERRUN
+
+        Returns:
+            PrecilaserMessage: message
+        """
         while True:
             try:
                 msg = self.instrument.read_bytes(1)
@@ -76,6 +123,12 @@ class AbstractPrecilaserDevice(ABC):
                     raise err
 
     def _read(self) -> PrecilaserMessage:
+        """
+        Read and handle a message from a Precilaser device
+
+        Returns:
+            PrecilaserMessage: message
+        """
         message = self._read_single_message()
         self._handle_message(message)
         return message
@@ -96,6 +149,16 @@ class AbstractPrecilaserDevice(ABC):
     def _generate_message(
         self, command: PrecilaserCommand, payload: Optional[bytes] = None
     ) -> PrecilaserMessage:
+        """
+        Generate a message to send to a Precilaser device
+
+        Args:
+            command (PrecilaserCommand): command to send
+            payload (Optional[bytes], optional): command payload. Defaults to None.
+
+        Returns:
+            PrecilaserMessage: message
+        """
         message = PrecilaserMessage(
             command=command,
             address=self.address,

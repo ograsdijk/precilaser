@@ -75,7 +75,7 @@ class PDStatus:
 
 
 @dataclass(frozen=True)
-class PrecilaserStatus:
+class AmplifierStatus:
     status_bytes: bytes = field(repr=False)
     endian: str = field(default="big", repr=False)
     stable: bool = field(init=False)

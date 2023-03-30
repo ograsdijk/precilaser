@@ -1,9 +1,9 @@
 from precilaser.enums import PrecilaserMessageType, PrecilaserReturn
 from precilaser.message import PrecilaserMessage, PrecilaserReturnParamLength
-from precilaser.status import PrecilaserStatus, SeedStatus
+from precilaser.status import AmplifierStatus, SeedStatus
 
 
-def test_PrecilaserStatus():
+def test_AmplifierStatus():
     # testing with a random number
     message = PrecilaserMessage(
         PrecilaserReturn.AMP_STATUS,
@@ -16,7 +16,7 @@ def test_PrecilaserStatus():
         endian="big",
         type=PrecilaserMessageType.RETURN,
     )
-    status = PrecilaserStatus(message.payload)
+    status = AmplifierStatus(message.payload)
     assert status.stable is False
     assert status.system_status.pd_protection == (False, False, False, False)
     assert status.system_status.temperature_protection == (
@@ -31,7 +31,7 @@ def test_PrecilaserStatus():
     assert status.driver_unlock.driver_enable_flag == (False, False, False)
     assert status.driver_unlock.interlock is False
     assert status.driver_current == (0.0, 0.0, 0.0)
-    assert status.pd_value == (0, 0, 0, 191, 4635)
+    assert status.pd_value == (0, 0, 0, 191)
     assert status.pd_status[0].sampling_enable is False
     assert status.pd_status[0].hardware_protection is True
     assert status.pd_status[0].upper_limit_enabled is False
