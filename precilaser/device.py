@@ -85,11 +85,6 @@ class AbstractPrecilaserDevice(ABC):
         Args:
             message (PrecilaserMessage): message
         """
-        while True:
-            if self.instrument.bytes_in_buffer != 0:  # type: ignore
-                self._handle_message(self._read())
-            else:
-                break
         self.instrument.write_raw(bytes(message.command_bytes))  # type: ignore
 
     def _read_single_message(self) -> PrecilaserMessage:

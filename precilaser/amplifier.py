@@ -86,7 +86,14 @@ class Amplifier(AbstractPrecilaserDevice):
             PrecilaserMessage: Message matching the return command
         """
         while True:
-            message = self._read()
+            try:
+                message = self._read()
+            except ValueError as error:
+                # when the buffer is full a partial message can lead to a invalid message terminator error
+                if "invalid message terminator" in error.args[0]:
+                    continue
+                else:
+                    raise error
             if message.command == return_command:
                 return message
 
@@ -95,7 +102,14 @@ class Amplifier(AbstractPrecilaserDevice):
         Retrieve messages from the device until the serial buffer is empty.
         """
         while self.instrument.bytes_in_buffer > 0:
-            self._read()
+            try:
+                self._read()
+            except ValueError as error:
+                # when the buffer is full a partial message can lead to a invalid message terminator error
+                if "invalid message terminator" in error.args[0]:
+                    continue
+                else:
+                    raise error
 
     @property
     def fault(self) -> bool:
