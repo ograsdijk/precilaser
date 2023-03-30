@@ -2,7 +2,16 @@ from .device import AbstractPrecilaserDevice
 from .enums import PrecilaserCommand, PrecilaserDeviceType, PrecilaserReturn
 from .message import PrecilaserMessage
 from .status import PrecilaserStatus
+from typing import Tuple
 
+def status_handler(message: PrecilaserMessage) -> PrecilaserStatus:
+    return PrecilaserStatus(message.payload)
+
+def temperature_handler(message: PrecilaserMessage) -> Tuple[float, float]:
+    return (
+        int.from_bytes(message.payload[1:3], message.endian) / 100,
+        int.from_bytes(message.payload[3:5], message.endian) / 100,
+    )
 
 class Amplifier(AbstractPrecilaserDevice):
     def __init__(
@@ -21,7 +30,7 @@ class Amplifier(AbstractPrecilaserDevice):
 
         self._message_handling[PrecilaserReturn.AMP_STATUS] = (
             "_status",
-            PrecilaserStatus,
+            status_handler,
         )
 
     def _read_until_reply(self, return_command: PrecilaserReturn) -> PrecilaserMessage:
@@ -88,14 +97,6 @@ class Amplifier(AbstractPrecilaserDevice):
         message = self._read_until_reply(PrecilaserReturn.AMP_SAVE)
         if message.payload != b"ROM saved":
             raise ValueError(f"Values not saved to ROM; {message.payload}")
-
-
-def temperature_handler(message: PrecilaserMessage) -> tuple[float, float]:
-    return (
-        int.from_bytes(message.payload[1:3], message.endian) / 100,
-        int.from_bytes(message.payload[3:5], message.endian) / 100,
-    )
-
 
 class SHGAmplifier(Amplifier):
     def __init__(

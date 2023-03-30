@@ -42,7 +42,7 @@ class AbstractPrecilaserDevice(ABC):
             for ret_cmd, (attr, transform) in self._message_handling.items():
                 if message.command == ret_cmd:
                     if message.payload is not None:
-                        setattr(self, attr, transform(message.payload))
+                        setattr(self, attr, transform(message))
                     else:
                         raise ValueError(f"{ret_cmd.name} no data bytes retrieved")
 
