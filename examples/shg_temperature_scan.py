@@ -79,13 +79,10 @@ amp.enable()
 
 
 # give the amplifier some time to finish starting up and going to the first temperature
-with console.status(
-    "Setting the first temperature point and waiting for temperature to stabilize"
-):
-    amp.shg_temperature = current_temperature_setpoint - scan_range / 2
-    wait_until_shg_temperature_stable(
-        amp, current_temperature_setpoint - scan_range / 2
-    )
+amp.shg_temperature = current_temperature_setpoint - scan_range / 2
+wait_until_shg_temperature_stable(
+    amp, current_temperature_setpoint - scan_range / 2, progress = True
+)
 
 amp.current = 5
 
@@ -98,10 +95,10 @@ with Live(group, refresh_per_second=10) as live:
         points,
     ):
         amp.shg_temperature = T
-        wait_until_shg_temperature_stable(amp, T)
+        wait_until_shg_temperature_stable(amp, T, time_stable = 2, progress = False)
         power = float(pm.query("MEAS:POW?")) * 1000
         data.append((T, amp.shg_temperature, power))
-        progress.update(task, advance=1, value=f"{T:>2.2f}")
+        progress.update(task, advance=1, value=f"{T:>2.2f} C")
         s, x, y = zip(*data)
         group.renderables[0] = get_panel(y, title="SHG power")
 
