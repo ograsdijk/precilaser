@@ -1,4 +1,5 @@
 import csv
+import datetime
 import time
 
 import asciichartpy as acp
@@ -27,6 +28,13 @@ power_meter = "USB0::0x1313::0x8078::P0020445::INSTR"  # Thorlabs PM100D
 scan_range = 4  # scan range in celcius to scan around the current setpoint
 dt = 10
 points = 101
+
+measurement_time = (
+    datetime.datetime.now()
+    .isoformat(timespec="seconds")
+    .replace(":", "_")
+    .replace("-", "_")
+)
 
 
 def get_panel(data, title, height=15, format="{:>2.2f}"):
@@ -108,7 +116,7 @@ amp.shg_temperature = current_temperature_setpoint
 xsetpoint, x, y = zip(*data)
 
 # write data to csv
-with open("shg_temperature_scan.csv", "w", newline="") as csv_file:
+with open(f"shg_temperature_scan_{measurement_time}.csv", "w", newline="") as csv_file:
     writer = csv.writer(csv_file, delimiter=",")
     writer.writerow(
         ["SHG temperature setpoint [C]", "SHG temperature [C]", "output power [mW]"]
