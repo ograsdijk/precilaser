@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "precilaser"
-version = "0.1.1a0"
+version = "0.1.1"
 description = ""
 authors = ["ograsdijk <o.grasdijk@gmail.com>"]
 readme = "README.md"

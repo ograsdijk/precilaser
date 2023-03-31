@@ -89,7 +89,8 @@ class Amplifier(AbstractPrecilaserDevice):
             try:
                 message = self._read()
             except ValueError as error:
-                # when the buffer is full a partial message can lead to a invalid message terminator error
+                # when the buffer is full a partial message can lead to a invalid
+                # message terminator error
                 if "invalid message terminator" in error.args[0]:
                     continue
                 else:
@@ -105,7 +106,8 @@ class Amplifier(AbstractPrecilaserDevice):
             try:
                 self._read()
             except ValueError as error:
-                # when the buffer is full a partial message can lead to a invalid message terminator error
+                # when the buffer is full a partial message can lead to a invalid
+                # message terminator error
                 if "invalid message terminator" in error.args[0]:
                     continue
                 else:
