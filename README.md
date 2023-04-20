@@ -1,7 +1,7 @@
 # Precilaser
 
 [![Python versions on PyPI](https://img.shields.io/pypi/pyversions/precilaser.svg)](https://pypi.python.org/pypi/precilaser/)
-[![CeNTREX-TlF version on PyPI](https://img.shields.io/pypi/v/precilaser.svg "Precilaser on PyPI")](https://pypi.python.org/pypi/precilaser/)
+[![Precilaser version on PyPI](https://img.shields.io/pypi/v/precilaser.svg "Precilaser on PyPI")](https://pypi.python.org/pypi/precilaser/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
  Python interface for precilaser devices
