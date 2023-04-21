@@ -4,6 +4,8 @@ version = "0.1.1"
 description = ""
 authors = ["ograsdijk <o.grasdijk@gmail.com>"]
 readme = "README.md"
+license = "MIT"
+repository = "https://github.com/ograsdijk/precilaser"
 
 [tool.poetry.dependencies]
 python = "^3.7"
