@@ -21,6 +21,9 @@ class Seed(AbstractPrecilaserDevice):
         self.serial: Optional[bytes] = None
         self.wavelength_params: Optional[Tuple[int, ...]] = None
 
+    def __exit__(self):
+        self.rm.close()
+
     def _set_value(
         self,
         value: int,
