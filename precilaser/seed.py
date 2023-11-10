@@ -145,7 +145,7 @@ class Seed(AbstractPrecilaserDevice):
         return wavelength / 10_000
 
     @wavelength.setter
-    def wavelength(self, wavelength):
+    def wavelength(self, wavelength: float):
         status = self.status
         assert (
             self.wavelength_params is not None
