@@ -151,11 +151,11 @@ class Seed(AbstractPrecilaserDevice):
             self.wavelength_params is not None
         ), "Wavelength parameters not loaded from device"
         parameter = self.wavelength_params
-        temp_grating_act = wavelength - (
+        temp_grating_act = (wavelength * 10_000 - (
             parameter[2] << 24
             | parameter[3] << 16
             | ((parameter[4] << 8) | parameter[5])
-        ) * 10_000 /  ((parameter[0] << 8) | parameter[1]
+        )) * 10_000 /  ((parameter[0] << 8) | parameter[1]
         )  
         temp_set = temp_grating_act / 1_000
-        self.temperature_setpoint(temp_set)
+        self.temperature_setpoint = temp_set
