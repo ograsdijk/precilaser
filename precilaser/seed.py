@@ -80,43 +80,43 @@ class Seed(AbstractPrecilaserDevice):
         else:
             raise ValueError(f"not set to requested value: {setpoint}")
 
-    def enable(self):
-        # supplied programming manual is incorrect, e.g. also the command and return
-        # enums
-        # self._set_value(True, PrecilaserCommand.SEED_ENABLE, nbytes=1)
-        # byte 13 is set to 1
-        enable_bytes = (
-            b"P\x00d\xa7\x19a\xa8a\xa8\x01\xf4\x00\x00\x00\x00\x00\x00\x00\x01\x01d"
-            b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x91K\r\n"
-        )
-        self.instrument.write_raw(enable_bytes)
-        # enabling/disabling the laser returns a status message, where in the first
-        # received message after sending the command bit 13 is set to indicate
-        # a change in emission state
-        message = self._read()
-        if message.payload is None or message.payload[13] != 1:
-            raise ValueError("emission not enabled")
-        # message = self._read()
-        # self._check_write_return(message.payload, True, "enable laser")
+    # def enable(self):
+    #     # supplied programming manual is incorrect, e.g. also the command and return
+    #     # enums
+    #     # self._set_value(True, PrecilaserCommand.SEED_ENABLE, nbytes=1)
+    #     # byte 13 is set to 1
+    #     enable_bytes = (
+    #         b"P\x00d\xa7\x19a\xa8a\xa8\x01\xf4\x00\x00\x00\x00\x00\x00\x00\x01\x01d"
+    #         b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x91K\r\n"
+    #     )
+    #     self.instrument.write_raw(enable_bytes)
+    #     # enabling/disabling the laser returns a status message, where in the first
+    #     # received message after sending the command bit 13 is set to indicate
+    #     # a change in emission state
+    #     message = self._read()
+    #     if message.payload is None or message.payload[13] != 1:
+    #         raise ValueError("emission not enabled")
+    #     # message = self._read()
+    #     # self._check_write_return(message.payload, True, "enable laser")
 
-    def disable(self):
-        # supplied programming manual is incorrect, e.g. also the command and return
-        # enums
-        # self._set_value(False, PrecilaserCommand.SEED_ENABLE, nbytes=1)
-        # byte 13 is set to 0
-        disable_bytes = (
-            b"P\x00d\xa7\x19a\xa8a\xa8\x01\xf4\x00\x00\x00\x00\x00\x00\x00\x00\x01d\x00"
-            b"\x00\x00\x00\x00\x00\x00\x00\x00\x90J\r\n"
-        )
-        self.instrument.write_raw(disable_bytes)
-        # enabling/disabling the laser returns a status message, where in the first
-        # received message after sending the command bit 13 is set to indicate
-        # a change in emission state
-        message = self._read()
-        if message.payload is None or message.payload[13] != 1:
-            raise ValueError("emission not disabled")
-        # message = self._read()
-        # self._check_write_return(message.payload, False, "disable laser")
+    # def disable(self):
+    #     # supplied programming manual is incorrect, e.g. also the command and return
+    #     # enums
+    #     # self._set_value(False, PrecilaserCommand.SEED_ENABLE, nbytes=1)
+    #     # byte 13 is set to 0
+    #     disable_bytes = (
+    #         b"P\x00d\xa7\x19a\xa8a\xa8\x01\xf4\x00\x00\x00\x00\x00\x00\x00\x00\x01d\x00"
+    #         b"\x00\x00\x00\x00\x00\x00\x00\x00\x90J\r\n"
+    #     )
+    #     self.instrument.write_raw(disable_bytes)
+    #     # enabling/disabling the laser returns a status message, where in the first
+    #     # received message after sending the command bit 13 is set to indicate
+    #     # a change in emission state
+    #     message = self._read()
+    #     if message.payload is None or message.payload[13] != 1:
+    #         raise ValueError("emission not disabled")
+    #     # message = self._read()
+    #     # self._check_write_return(message.payload, False, "disable laser")
 
     def _get_serial_wavelength_params(self):
         message = self._generate_message(PrecilaserCommand.SEED_SERIAL_WAV)
