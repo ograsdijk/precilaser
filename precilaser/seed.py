@@ -21,6 +21,9 @@ class Seed(AbstractPrecilaserDevice):
         self.serial: Optional[bytes] = None
         self.wavelength_params: Optional[Tuple[int, ...]] = None
 
+    def __exit__(self):
+        self.rm.close()
+
     def _set_value(
         self,
         value: int,
@@ -143,3 +146,19 @@ class Seed(AbstractPrecilaserDevice):
         )
         # manual states / 1_000 but this yields an incorrect wavelength
         return wavelength / 10_000
+
+    @wavelength.setter
+    def wavelength(self, wavelength: float):
+        status = self.status
+        assert (
+            self.wavelength_params is not None
+        ), "Wavelength parameters not loaded from device"
+        parameter = self.wavelength_params
+        temp_grating_act = (wavelength * 10_000 - (
+            parameter[2] << 24
+            | parameter[3] << 16
+            | ((parameter[4] << 8) | parameter[5])
+        )) * 10_000 /  ((parameter[0] << 8) | parameter[1]
+        )  
+        temp_set = temp_grating_act / 1_000
+        self.temperature_setpoint = temp_set
