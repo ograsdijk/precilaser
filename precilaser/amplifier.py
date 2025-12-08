@@ -153,10 +153,10 @@ class Amplifier(AbstractPrecilaserDevice):
         """
         current_int = int(round(current * 100, 0))
         message = self._generate_message(
-            PrecilaserCommand.AMP_SET_CURRENT, current_int.to_bytes(2, self.endian)
+            PrecilaserCommand.SET_CURRENT, current_int.to_bytes(2, self.endian)
         )
         self._write(message)
-        self._read_until_reply(PrecilaserReturn.AMP_SET_CURRENT)
+        self._read_until_reply(PrecilaserReturn.SET_CURRENT)
 
     def enable(self) -> None:
         """
@@ -166,10 +166,10 @@ class Amplifier(AbstractPrecilaserDevice):
             ValueError: raises if the amplifier isn't enabled
         """
         message = self._generate_message(
-            PrecilaserCommand.AMP_ENABLE, 0b111.to_bytes(1, self.endian)
+            PrecilaserCommand.ENABLE, 0b111.to_bytes(1, self.endian)
         )
         self._write(message)
-        message = self._read_until_reply(PrecilaserReturn.AMP_ENABLE)
+        message = self._read_until_reply(PrecilaserReturn.ENABLE)
         if message.payload != b"Enable set ok":
             raise ValueError(f"Amplifier not enabled; {message.payload!r}")
 
@@ -181,10 +181,10 @@ class Amplifier(AbstractPrecilaserDevice):
             ValueError: raises if the amplifier isn't disabled
         """
         message = self._generate_message(
-            PrecilaserCommand.AMP_ENABLE, 0b0.to_bytes(1, self.endian)
+            PrecilaserCommand.ENABLE, 0b0.to_bytes(1, self.endian)
         )
         self._write(message)
-        message = self._read_until_reply(PrecilaserReturn.AMP_ENABLE)
+        message = self._read_until_reply(PrecilaserReturn.ENABLE)
         if message.payload != b"Enable set ok":
             raise ValueError(f"Amplifier not disabled; {message.payload!r}")
 
@@ -210,7 +210,7 @@ class Amplifier(AbstractPrecilaserDevice):
         """
         message = self._generate_message(PrecilaserCommand.AMP_POWER_STAB, b"\x01")
         self._write(message)
-        message = self._read_until_reply(PrecilaserReturn.AMP_ENABLE)
+        message = self._read_until_reply(PrecilaserReturn.ENABLE)
         if message.payload != b"Stable set ok":
             raise ValueError(f"Power stabilization not enabled: {message.payload!r}")
 
@@ -223,7 +223,7 @@ class Amplifier(AbstractPrecilaserDevice):
         """
         message = self._generate_message(PrecilaserCommand.AMP_POWER_STAB, b"\x00")
         self._write(message)
-        message = self._read_until_reply(PrecilaserReturn.AMP_ENABLE)
+        message = self._read_until_reply(PrecilaserReturn.ENABLE)
         if message.payload != b"Stable set ok":
             raise ValueError(f"Power stabilization not disabled: {message.payload!r}")
 
