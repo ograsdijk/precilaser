@@ -1,7 +1,7 @@
 from typing import Optional, Tuple
 
 from .device import AbstractPrecilaserDevice
-from .enums import PrecilaserCommand, PrecilaserDeviceType, PrecilaserReturn
+from .enums import Endian, PrecilaserCommand, PrecilaserDeviceType, PrecilaserReturn
 from .message import PrecilaserMessage
 from .status import AmplifierStatus
 
@@ -54,15 +54,16 @@ def temperature_handler(message: PrecilaserMessage) -> Tuple[float, float]:
 class Amplifier(AbstractPrecilaserDevice):
     def __init__(
         self,
-        resource_name: str,
+        port: str,
         address: int,
         header: bytes = b"\x50",
         terminator: bytes = b"\x0d\x0a",
         device_type: PrecilaserDeviceType = PrecilaserDeviceType.AMP,
-        endian: str = "big",
+        endian: Endian = "big",
+        timeout: float = 1.0,
     ):
         super().__init__(
-            resource_name, address, header, terminator, device_type, endian
+            port, address, header, terminator, device_type, endian, timeout
         )
         # Precilaser amplifiers return a status message periodically; when a status
         # message is retrieved, _handle_message ensures the message payload is
@@ -102,7 +103,7 @@ class Amplifier(AbstractPrecilaserDevice):
         """
         Retrieve messages from the device until the serial buffer is empty.
         """
-        while self.instrument.bytes_in_buffer > 0:
+        while self.instrument.in_waiting > 0:
             try:
                 self._read()
             except ValueError as error:
@@ -231,15 +232,16 @@ class Amplifier(AbstractPrecilaserDevice):
 class SHGAmplifier(Amplifier):
     def __init__(
         self,
-        resource_name: str,
+        port: str,
         address: int,
         header: bytes = b"\x50",
         terminator: bytes = b"\x0d\x0a",  # '\r\n'
         device_type: PrecilaserDeviceType = PrecilaserDeviceType.AMP,
-        endian: str = "big",
+        endian: Endian = "big",
+        timeout: float = 1.0,
     ):
         super().__init__(
-            resource_name, address, header, terminator, device_type, endian
+            port, address, header, terminator, device_type, endian, timeout
         )
         # Precilaser SHG amplifiers return a TEC temperature message periodically; when
         # a TEC temperature message is retrieved, _handle_message ensures the message

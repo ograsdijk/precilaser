@@ -6,13 +6,18 @@
 
  Python interface for precilaser devices
 
-Implements a python interface using pyvisa for 3 Precilaser devices:
+Implements a python interface using pyserial for 3 Precilaser devices:
 * Precilaser Fiber DFB
 * Precilaser Amplifier
 * Precilaser SHG Amplifier
 
 ## Installation
 `pip install precilaser` or install directly from source.
+
+This project is managed with [uv](https://docs.astral.sh/uv/). For development,
+clone the repository and run `uv sync` to create a virtual environment with all
+dependencies (including the test tooling), then `uv run pytest` to run the tests
+and `uv build` to build the sdist/wheel.
 
 ## Implemented Functionality
 ### Precilaser Fiber DFB
@@ -105,11 +110,23 @@ A subclass of the `Amplifier`, includes all `Amplifier` functionality plus addit
   get or set the shg crystal temperature [C]
 
 ## Example
-```Python
+The devices can be used directly or as a context manager; the context manager
+guarantees the serial port is closed when the block exits.
 
+```Python
 from precilaser import SHGAmplifier
 
-amp = SHGAmplifier("COM50", address = 0)
+with SHGAmplifier("COM50", address=0) as amp:
+    # change the SHG crystal temperature
+    amp.shg_temperature = 73.15
+```
 
-# change the SHG crystal temperature
+Or, without the context manager, close the port explicitly when done:
+
+```Python
+from precilaser import SHGAmplifier
+
+amp = SHGAmplifier("COM50", address=0)
 amp.shg_temperature = 73.15
+amp.close()
+```

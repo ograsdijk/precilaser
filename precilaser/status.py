@@ -1,6 +1,8 @@
 from dataclasses import dataclass, field
 from typing import Tuple
 
+from .enums import Endian
+
 
 @dataclass(frozen=True)
 class SystemStatus:
@@ -77,7 +79,7 @@ class PDStatus:
 @dataclass(frozen=True)
 class AmplifierStatus:
     status_bytes: bytes = field(repr=False)
-    endian: str = field(default="big", repr=False)
+    endian: Endian = field(default="big", repr=False)
     stable: bool = field(init=False)
     system_status: SystemStatus = field(init=False)
     driver_unlock: DriverUnlock = field(init=False)
@@ -139,7 +141,7 @@ class AmplifierStatus:
 @dataclass(frozen=True)
 class SeedStatus:
     status_bytes: bytes = field(repr=False)
-    endian: str = field(repr=False)
+    endian: Endian = field(repr=False)
     temperature_set: float = field(init=False)
     temperature_act: float = field(init=False)
     temperature_diode: float = field(init=False)

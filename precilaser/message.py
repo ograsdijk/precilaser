@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from typing import Optional, Union
 
 from .check import checksum, xor_check
-from .enums import PrecilaserCommand, PrecilaserMessageType, PrecilaserReturn
+from .enums import Endian, PrecilaserCommand, PrecilaserMessageType, PrecilaserReturn
 
 
 @dataclass
@@ -42,11 +42,11 @@ class PrecilaserMessage:
     payload: Optional[bytes] = None
     header: bytes = field(default=b"P", repr=False)
     terminator: bytes = field(default=b"\r\n", repr=False)
-    endian: str = field(default="big", repr=False)
+    endian: Endian = field(default="big", repr=False)
     type: PrecilaserMessageType = PrecilaserMessageType.COMMAND
     command_bytes: bytearray = field(init=False)
-    checksum: bytes = field(init=False)
-    xor_check: bytes = field(init=False)
+    checksum: int = field(init=False)
+    xor_check: int = field(init=False)
 
     def __post_init__(self):
         command_bytes = b""
@@ -80,12 +80,12 @@ def decompose_message(
     address: int,
     header: bytes,
     terminator: bytes,
-    endian: str,
+    endian: Endian,
 ) -> PrecilaserMessage:
     if message[: len(header)] != header:
-        raise ValueError(f"invalid message header {message[:len(header)]!r}")
+        raise ValueError(f"invalid message header {message[: len(header)]!r}")
     if message[-len(terminator) :] != terminator:
-        raise ValueError(f"invalid message terminator {message[-len(terminator):]!r}")
+        raise ValueError(f"invalid message terminator {message[-len(terminator) :]!r}")
 
     ret = PrecilaserReturn(message[3].to_bytes(1, endian))
     param_length = message[4]
@@ -101,18 +101,8 @@ def decompose_message(
         endian=endian,
         type=PrecilaserMessageType.RETURN,
     )
-    try:
-        if pm.checksum != checksum:
-            raise ValueError(
-                f"invalid message checksum {checksum} !="
-                f" {int.from_bytes(pm.checksum, endian)}"
-            )
-        if pm.xor_check != xor_check:
-            raise ValueError(
-                f"invalid xor check {xor_check} !="
-                f" {int.from_bytes(pm.xor_check, endian)}"
-            )
-    except Exception as err:
-        print(pm)
-        raise err
+    if pm.checksum != checksum:
+        raise ValueError(f"invalid message checksum {checksum} != {pm.checksum}")
+    if pm.xor_check != xor_check:
+        raise ValueError(f"invalid xor check {xor_check} != {pm.xor_check}")
     return pm

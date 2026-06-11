@@ -1,28 +1,26 @@
 from typing import Optional, Tuple
 
 from .device import AbstractPrecilaserDevice
-from .enums import PrecilaserCommand, PrecilaserDeviceType
+from .enums import Endian, PrecilaserCommand, PrecilaserDeviceType
 from .status import SeedStatus
 
 
 class Seed(AbstractPrecilaserDevice):
     def __init__(
         self,
-        resource_name: str,
+        port: str,
         address: int,
         header: bytes = b"P",
         terminator: bytes = b"\r\n",
         device_type: PrecilaserDeviceType = PrecilaserDeviceType.SEED,
-        endian: str = "big",
+        endian: Endian = "big",
+        timeout: float = 1.0,
     ):
         super().__init__(
-            resource_name, address, header, terminator, device_type, endian
+            port, address, header, terminator, device_type, endian, timeout
         )
         self.serial: Optional[bytes] = None
         self.wavelength_params: Optional[Tuple[int, ...]] = None
-
-    def __exit__(self):
-        self.rm.close()
 
     def _set_value(
         self,
@@ -72,9 +70,9 @@ class Seed(AbstractPrecilaserDevice):
 
     @piezo_voltage.setter
     def piezo_voltage(self, voltage: float):
-        assert (
-            voltage >= 0 and voltage <= 74
-        ), "Piezo voltage cannot exceed 0V-74V range"
+        assert voltage >= 0 and voltage <= 74, (
+            "Piezo voltage cannot exceed 0V-74V range"
+        )
         setpoint = int(voltage * 100)
         self._set_value(setpoint, PrecilaserCommand.SEED_SET_VOLTAGE)
         message = self._read()
@@ -92,7 +90,7 @@ class Seed(AbstractPrecilaserDevice):
     #         b"P\x00d\xa7\x19a\xa8a\xa8\x01\xf4\x00\x00\x00\x00\x00\x00\x00\x01\x01d"
     #         b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x91K\r\n"
     #     )
-    #     self.instrument.write_raw(enable_bytes)
+    #     self.instrument.write(enable_bytes)
     #     # enabling/disabling the laser returns a status message, where in the first
     #     # received message after sending the command bit 13 is set to indicate
     #     # a change in emission state
@@ -108,10 +106,10 @@ class Seed(AbstractPrecilaserDevice):
     #     # self._set_value(False, PrecilaserCommand.SEED_ENABLE, nbytes=1)
     #     # byte 13 is set to 0
     #     disable_bytes = (
-    #         b"P\x00d\xa7\x19a\xa8a\xa8\x01\xf4\x00\x00\x00\x00\x00\x00\x00\x00\x01d\x00"
-    #         b"\x00\x00\x00\x00\x00\x00\x00\x00\x90J\r\n"
+    #         b"P\x00d\xa7\x19a\xa8a\xa8\x01\xf4\x00\x00\x00\x00\x00\x00\x00\x00\x01d"
+    #         b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x90J\r\n"
     #     )
-    #     self.instrument.write_raw(disable_bytes)
+    #     self.instrument.write(disable_bytes)
     #     # enabling/disabling the laser returns a status message, where in the first
     #     # received message after sending the command bit 13 is set to indicate
     #     # a change in emission state
@@ -133,9 +131,9 @@ class Seed(AbstractPrecilaserDevice):
     def wavelength(self) -> float:
         status = self.status
         temp_grating_act = status.temperature_act * 1_000
-        assert (
-            self.wavelength_params is not None
-        ), "Wavelength parameters not loaded from device"
+        assert self.wavelength_params is not None, (
+            "Wavelength parameters not loaded from device"
+        )
         parameter = self.wavelength_params
         wavelength = (
             (parameter[0] << 8) | parameter[1]
@@ -149,16 +147,21 @@ class Seed(AbstractPrecilaserDevice):
 
     @wavelength.setter
     def wavelength(self, wavelength: float):
-        status = self.status
-        assert (
-            self.wavelength_params is not None
-        ), "Wavelength parameters not loaded from device"
+        assert self.wavelength_params is not None, (
+            "Wavelength parameters not loaded from device"
+        )
         parameter = self.wavelength_params
-        temp_grating_act = (wavelength * 10_000 - (
-            parameter[2] << 24
-            | parameter[3] << 16
-            | ((parameter[4] << 8) | parameter[5])
-        )) * 10_000 /  ((parameter[0] << 8) | parameter[1]
-        )  
+        temp_grating_act = (
+            (
+                wavelength * 10_000
+                - (
+                    parameter[2] << 24
+                    | parameter[3] << 16
+                    | ((parameter[4] << 8) | parameter[5])
+                )
+            )
+            * 10_000
+            / ((parameter[0] << 8) | parameter[1])
+        )
         temp_set = temp_grating_act / 1_000
         self.temperature_setpoint = temp_set

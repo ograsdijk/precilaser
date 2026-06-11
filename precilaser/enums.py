@@ -1,4 +1,8 @@
 from enum import Enum, auto
+from typing import Literal
+
+# byte order accepted by int.to_bytes / int.from_bytes
+Endian = Literal["little", "big"]
 
 
 class PrecilaserCommand(Enum):
@@ -8,11 +12,11 @@ class PrecilaserCommand(Enum):
     AMP_TEC_TEMPERATURE = b"\x87"
     AMP_STATUS = b"\x04"
     AMP_SAVE = b"\x8e"
-    SEED_STATUS = b"\xA9"
-    SEED_SET_TEMP = b"\xA5"
-    SEED_SET_VOLTAGE = b"\xAE"
-    SEED_ENABLE = b"\xA8"
-    SEED_SERIAL_WAV = b"\xAA"
+    SEED_STATUS = b"\xa9"
+    SEED_SET_TEMP = b"\xa5"
+    SEED_SET_VOLTAGE = b"\xae"
+    SEED_ENABLE = b"\xa8"
+    SEED_SERIAL_WAV = b"\xaa"
 
 
 class PrecilaserReturn(Enum):
@@ -22,11 +26,11 @@ class PrecilaserReturn(Enum):
     AMP_TEC_TEMPERATURE = b"\x45"
     AMP_STATUS = b"\x44"
     AMP_SAVE = b"N"
-    SEED_STATUS = b"\xB7"
-    SEED_SET_TEMP = b"\xB3"
-    SEED_SET_VOLTAGE = b"\xBE"
-    SEED_ENABLE = b"\xB8"
-    SEED_SERIAL_WAV = b"\xB0"
+    SEED_STATUS = b"\xb7"
+    SEED_SET_TEMP = b"\xb3"
+    SEED_SET_VOLTAGE = b"\xbe"
+    SEED_ENABLE = b"\xb8"
+    SEED_SERIAL_WAV = b"\xb0"
 
 
 class PrecilaserMessageType(Enum):

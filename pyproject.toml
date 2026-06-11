@@ -1,21 +1,40 @@
-[tool.poetry]
+[project]
 name = "precilaser"
 version = "0.1.2"
 description = ""
-authors = ["ograsdijk <o.grasdijk@gmail.com>"]
+authors = [{ name = "ograsdijk", email = "o.grasdijk@gmail.com" }]
 readme = "README.md"
 license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.11"
+dependencies = ["pyserial>=3.5"]
+
+[project.urls]
 repository = "https://github.com/ograsdijk/precilaser"
 
-[tool.poetry.dependencies]
-python = "^3.7"
-PyVISA = "^1.12.0"
-
+[dependency-groups]
+dev = ["pytest", "mypy", "ruff"]
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["uv_build>=0.6.6,<0.7.0"]
+build-backend = "uv_build"
+
+# the package lives at the repo root (precilaser/), not under src/
+[tool.uv.build-backend]
+module-root = ""
+
+[tool.ruff]
+line-length = 88
+# empty, invalid notebook tracked in the repo; excluded so tooling doesn't choke
+extend-exclude = ["test.ipynb"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]   # pyflakes, pycodestyle, import sorting
 
 [[tool.mypy.overrides]]
-module = "pyvisa"
+module = "serial"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "rich.*"
 ignore_missing_imports = true
