@@ -44,7 +44,7 @@ amp.current = 5
 
 
 def eval_function(parametrization: Dict[str, float]):
-    while amp.instrument.bytes_in_buffer > 0:
+    while amp.instrument.in_waiting > 0:
         try:
             amp._read_until_buffer_empty()
         except Exception:

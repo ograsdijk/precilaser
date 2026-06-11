@@ -46,9 +46,9 @@ class TaskSpeed(ProgressColumn):
         if task.speed is None:
             return ""
         elif task.speed >= 0.1:
-            return f"{( task.speed or 0 ):.1f}/s"
+            return f"{(task.speed or 0):.1f}/s"
         else:
-            return f"{( 1 / task.speed or 0):.1f} s/i"
+            return f"{(1 / task.speed or 0):.1f} s/i"
 
 
 progress = Progress(

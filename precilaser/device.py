@@ -1,10 +1,10 @@
 from abc import ABC
-from typing import Callable, Optional, cast
+from typing import Callable, Optional
 
-import pyvisa
-from pyvisa import VisaIOError
+import serial
 
 from .enums import (
+    Endian,
     PrecilaserCommand,
     PrecilaserDeviceType,
     PrecilaserMessageType,
@@ -16,31 +16,27 @@ from .message import PrecilaserMessage, decompose_message
 class AbstractPrecilaserDevice(ABC):
     def __init__(
         self,
-        resource_name: str,
+        port: str,
         address: int,
         header: bytes,
         terminator: bytes,
         device_type: PrecilaserDeviceType,
-        endian: str,
+        endian: Endian,
+        timeout: float = 1.0,
     ):
         """
         Generic Precilaser device interface
 
         Args:
-            resource_name (str): resource name, e.g. com port
+            port (str): serial port, e.g. "COM6" or "/dev/ttyUSB0"
             address (int): device address
             header (bytes): message header
             terminator (bytes): message terminator
             device_type (PrecilaserDeviceType): device type
             endian (str): endian of message payload
+            timeout (float): serial read timeout [s]. Defaults to 1.0 s.
         """
-        self.rm = pyvisa.ResourceManager()
-        self.instrument = cast(
-            pyvisa.resources.SerialInstrument,
-            self.rm.open_resource(
-                resource_name=resource_name, baud_rate=115200, write_termination=""
-            ),
-        )
+        self.instrument = serial.Serial(port=port, baudrate=115200, timeout=timeout)
 
         self.address = address
         self.header = header
@@ -85,37 +81,55 @@ class AbstractPrecilaserDevice(ABC):
         Args:
             message (PrecilaserMessage): message
         """
-        self.instrument.write_raw(bytes(message.command_bytes))  # type: ignore
+        self.instrument.write(bytes(message.command_bytes))
+
+    def _read_exact(self, n: int) -> bytes:
+        """
+        Read exactly n bytes from the device, raising on a short read.
+
+        pyserial's read(n) returns up to n bytes, returning fewer (or none) once
+        the read timeout elapses. A short read therefore means the device went
+        silent mid-frame.
+
+        Args:
+            n (int): number of bytes to read
+
+        Raises:
+            TimeoutError: if fewer than n bytes are received before the timeout
+
+        Returns:
+            bytes: exactly n bytes
+        """
+        data = self.instrument.read(n)
+        if len(data) < n:
+            raise TimeoutError(f"expected {n} bytes, received {len(data)}")
+        return data
 
     def _read_single_message(self) -> PrecilaserMessage:
         """
         Read a single message from the Precilaser device
 
         Raises:
-            err: raise any error that isn't a VI_ERROR_ASRL_OVERRUN
+            TimeoutError: if no data is received before the read timeout
 
         Returns:
             PrecilaserMessage: message
         """
         while True:
-            try:
-                msg = self.instrument.read_bytes(1)
-                if msg == self.header:
-                    msg += self.instrument.read_bytes(2)
-                    if msg == self.header + b"\x00" + self.address.to_bytes(
-                        1, self.endian
-                    ):
-                        msg += self.instrument.read_bytes(2)
-                        msg += self.instrument.read_bytes(msg[-1] + 4)
-                        message = decompose_message(
-                            msg, self.address, self.header, self.terminator, self.endian
-                        )
-                        return message
-            except VisaIOError as err:
-                if "VI_ERROR_ASRL_OVERRUN" in err.args[0]:
-                    continue
-                else:
-                    raise err
+            # scan byte-by-byte until the header is found to (re)synchronize
+            msg = self.instrument.read(1)
+            if len(msg) == 0:
+                raise TimeoutError("no data received from device")
+            if msg != self.header:
+                continue
+            msg += self._read_exact(2)
+            if msg != self.header + b"\x00" + self.address.to_bytes(1, self.endian):
+                continue
+            msg += self._read_exact(2)
+            msg += self._read_exact(msg[-1] + 4)
+            return decompose_message(
+                msg, self.address, self.header, self.terminator, self.endian
+            )
 
     def _read(self) -> PrecilaserMessage:
         """
@@ -164,3 +178,13 @@ class AbstractPrecilaserDevice(ABC):
             type=PrecilaserMessageType.COMMAND,
         )
         return message
+
+    def close(self) -> None:
+        """Close the underlying serial port."""
+        self.instrument.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
