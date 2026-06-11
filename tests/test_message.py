@@ -7,7 +7,7 @@ from precilaser.message import (
 
 
 def test_PrecilaserMessage():
-    for command in [PrecilaserCommand.AMP_SET_CURRENT]:
+    for command in [PrecilaserCommand.SET_CURRENT]:
         value = int(1.5 * 100)
         param_length = getattr(PrecilaserCommandParamLength, command.name)
         payload = value.to_bytes(param_length, "big")

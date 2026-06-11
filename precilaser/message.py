@@ -7,8 +7,8 @@ from .enums import PrecilaserCommand, PrecilaserMessageType, PrecilaserReturn
 
 @dataclass
 class PrecilaserCommandParamLength:
-    AMP_ENABLE: int = 1
-    AMP_SET_CURRENT: int = 2
+    ENABLE: int = 1
+    SET_CURRENT: int = 2
     AMP_POWER_STAB: int = 1
     AMP_TEC_TEMPERATURE: int = 4
     AMP_STATUS: int = 0
@@ -22,8 +22,8 @@ class PrecilaserCommandParamLength:
 
 @dataclass
 class PrecilaserReturnParamLength:
-    AMP_ENABLE: int = 13
-    AMP_SET_CURRENT: int = 46
+    ENABLE: int = 13
+    SET_CURRENT: int = 46
     AMP_POWER_STAB: int = 13
     AMP_TEC_TEMPERATURE: int = 17
     AMP_STATUS: int = 64
