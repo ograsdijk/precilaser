@@ -10,7 +10,6 @@ repository = "https://github.com/ograsdijk/precilaser"
 [tool.poetry.dependencies]
 python = "^3.7"
 PyVISA = "^1.12.0"
-rich = "^13.3.3"
 
 
 [build-system]
