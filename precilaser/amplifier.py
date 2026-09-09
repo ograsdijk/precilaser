@@ -1,3 +1,4 @@
+import time
 from typing import Optional, Tuple
 
 from .device import AbstractPrecilaserDevice
@@ -10,6 +11,17 @@ from .status import AmplifierStatus
 # 300 ms, which means the serial buffer can fill up quickly. Some additional functions
 # such as _read_until_buffer_empty and read_until_reply had to be added to account for
 # this.
+#
+# Because the device is never quiet, the pyserial read timeout only fires when the
+# device goes silent; it cannot bound a loop in which every read succeeds. Both loops
+# below therefore carry their own wall-clock deadline, so waiting for a reply that
+# never arrives raises instead of spinning forever.
+
+
+# Wall-clock bound for the read loops [s]. A reply follows the write immediately, so
+# the only legitimate wait is on the status frames already in flight (~300 ms each);
+# 2 s leaves ample margin while still failing well inside typical caller timeouts.
+DEFAULT_REPLY_TIMEOUT = 2.0
 
 
 def status_handler(message: PrecilaserMessage) -> AmplifierStatus:
@@ -75,18 +87,38 @@ class Amplifier(AbstractPrecilaserDevice):
 
         self._status: Optional[AmplifierStatus] = None
 
-    def _read_until_reply(self, return_command: PrecilaserReturn) -> PrecilaserMessage:
+    def _read_until_reply(
+        self,
+        return_command: PrecilaserReturn,
+        timeout: float = DEFAULT_REPLY_TIMEOUT,
+    ) -> PrecilaserMessage:
         """
         Retrieve messages from the device until a message with the return code matching
         return_command is retrieved.
 
+        The amplifier interleaves unsolicited status frames with command replies on the
+        same stream, so non-matching frames are discarded here; their payloads are still
+        cached by _handle_message.
+
         Args:
             return_command (PrecilaserReturn): message command to wait for
+            timeout (float): wall-clock bound on the whole loop [s]. Defaults to
+                DEFAULT_REPLY_TIMEOUT.
+
+        Raises:
+            TimeoutError: if no matching message is retrieved within timeout
 
         Returns:
             PrecilaserMessage: Message matching the return command
         """
+        deadline = time.monotonic() + timeout
         while True:
+            # checked before each read so the terminator-resync path below, which can
+            # loop without consuming a whole frame, is bounded as well
+            if time.monotonic() > deadline:
+                raise TimeoutError(
+                    f"no {return_command.name} reply received within {timeout} s"
+                )
             try:
                 message = self._read()
             except ValueError as error:
@@ -99,11 +131,22 @@ class Amplifier(AbstractPrecilaserDevice):
             if message.command == return_command:
                 return message
 
-    def _read_until_buffer_empty(self) -> None:
+    def _read_until_buffer_empty(self, timeout: float = DEFAULT_REPLY_TIMEOUT) -> None:
         """
         Retrieve messages from the device until the serial buffer is empty.
+
+        Args:
+            timeout (float): wall-clock bound on the whole loop [s]. Defaults to
+                DEFAULT_REPLY_TIMEOUT.
+
+        Raises:
+            TimeoutError: if the buffer has not drained within timeout, i.e. the device
+                produces frames at least as fast as they are read
         """
+        deadline = time.monotonic() + timeout
         while self.instrument.in_waiting > 0:
+            if time.monotonic() > deadline:
+                raise TimeoutError(f"serial buffer did not drain within {timeout} s")
             try:
                 self._read()
             except ValueError as error:
@@ -211,7 +254,7 @@ class Amplifier(AbstractPrecilaserDevice):
         """
         message = self._generate_message(PrecilaserCommand.AMP_POWER_STAB, b"\x01")
         self._write(message)
-        message = self._read_until_reply(PrecilaserReturn.AMP_ENABLE)
+        message = self._read_until_reply(PrecilaserReturn.AMP_POWER_STAB)
         if message.payload != b"Stable set ok":
             raise ValueError(f"Power stabilization not enabled: {message.payload!r}")
 
@@ -224,7 +267,7 @@ class Amplifier(AbstractPrecilaserDevice):
         """
         message = self._generate_message(PrecilaserCommand.AMP_POWER_STAB, b"\x00")
         self._write(message)
-        message = self._read_until_reply(PrecilaserReturn.AMP_ENABLE)
+        message = self._read_until_reply(PrecilaserReturn.AMP_POWER_STAB)
         if message.payload != b"Stable set ok":
             raise ValueError(f"Power stabilization not disabled: {message.payload!r}")
 
